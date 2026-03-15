@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>土日ドット</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --card: #1a1a1a;
+    --card-border: #2a2a2a;
+    --text: #f0f0f0;
+    --text-secondary: #888;
+    --accent: #5b7fff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Tab Bar */
+  .tab-bar {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 430px;
+    display: flex;
+    background: rgba(20,20,20,0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--card-border);
+    padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+    z-index: 100;
+  }
+
+  .tab-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 4px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: color 0.2s;
+    border: none;
+    background: none;
+    font-family: inherit;
+  }
+
+  .tab-item.active { color: var(--accent); }
+  .tab-item svg { width: 24px; height: 24px; fill: currentColor; }
+  .tab-item span { font-size: 10px; }
+
+  /* Screens */
+  .screen { display: none; padding: 16px 16px 90px; }
+  .screen.active { display: block; }
+
+  .screen-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 12px 0 20px;
+  }
+
+  /* Year Selector */
+  .year-selector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  .year-selector button {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    color: var(--text);
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+  }
+
+  .year-selector button:hover { background: #333; }
+  .year-text { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  /* Stats Row */
+  .stats-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .stat-badge {
+    flex: 1;
+    text-align: center;
+    padding: 12px 8px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+  }
+
+  .stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-label { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+  .stat-blue .stat-value { color: #5b7fff; }
+  .stat-orange .stat-value { color: #ff9f43; }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+    scrollbar-width: none;
+  }
+  .legend::-webkit-scrollbar { display: none; }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+
+  .legend-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Month Section */
+  .month-section { margin-bottom: 20px; }
+
+  .month-label {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+  }
+
+  .dot-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .dot {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    position: relative;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .dot:hover { transform: scale(1.15); }
+  .dot:active { transform: scale(0.95); }
+
+  .dot.today {
+    box-shadow: 0 0 0 2.5px var(--text);
+  }
+
+  .dot.unassigned { background: #2a2a2a; color: #555; }
+  .dot.past-unassigned { background: #1e1e1e; color: #444; }
+
+  .dot-text { pointer-events: none; }
+
+  /* Category Picker Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 200;
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .modal-overlay.active { display: flex; }
+
+  .modal {
+    background: var(--card);
+    width: 100%;
+    max-width: 430px;
+    border-radius: 20px 20px 0 0;
+    padding: 20px 20px max(20px, env(safe-area-inset-bottom));
+    animation: slideUp 0.3s ease;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  .modal-handle {
+    width: 36px; height: 4px;
+    background: #555;
+    border-radius: 2px;
+    margin: 0 auto 16px;
+  }
+
+  .modal-date {
+    text-align: center;
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .modal-current {
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+  }
+
+  .category-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .category-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 4px;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: none;
+    color: var(--text);
+    font-family: inherit;
+  }
+
+  .category-btn:hover { opacity: 0.8; }
+  .category-btn.selected { border-color: currentColor; }
+  .category-btn .cat-emoji { font-size: 24px; }
+  .category-btn .cat-name { font-size: 11px; }
+
+  .note-input {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--bg);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+  }
+
+  .note-input:focus { border-color: var(--accent); }
+  .note-input::placeholder { color: #555; }
+
+  /* Summary Tab */
+  .big-number-card {
+    text-align: center;
+    padding: 28px 16px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    margin-bottom: 20px;
+  }
+
+  .big-number {
+    font-size: 72px;
+    font-weight: 800;
+    line-height: 1;
+    background: linear-gradient(135deg, #5b7fff, #c084fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .big-label { font-size: 16px; color: var(--text-secondary); margin-top: 8px; }
+
+  .sub-stats {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin-top: 16px;
+  }
+
+  .sub-stat-value { font-size: 22px; font-weight: 700; }
+  .sub-stat-label { font-size: 12px; color: var(--text-secondary); }
+
+  /* Progress Ring */
+  .progress-card {
+    text-align: center;
+    padding: 24px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    margin-bottom: 20px;
+  }
+
+  .progress-card h3 { font-size: 16px; margin-bottom: 16px; }
+
+  .ring-container {
+    position: relative;
+    width: 150px; height: 150px;
+    margin: 0 auto;
+  }
+
+  .ring-container svg { transform: rotate(-90deg); }
+
+  .ring-label {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+
+  .ring-percent { font-size: 28px; font-weight: 700; }
+  .ring-sub { font-size: 12px; color: var(--text-secondary); }
+
+  /* Breakdown */
+  .breakdown-card {
+    padding: 20px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    margin-bottom: 20px;
+  }
+
+  .breakdown-card h3 { font-size: 16px; margin-bottom: 16px; }
+
+  .breakdown-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+  }
+
+  .breakdown-emoji { font-size: 20px; width: 28px; text-align: center; }
+  .breakdown-name { font-size: 14px; flex: 1; }
+  .breakdown-count { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; min-width: 32px; text-align: right; }
+
+  .mini-bar {
+    width: 80px; height: 14px;
+    background: #222;
+    border-radius: 7px;
+    overflow: hidden;
+  }
+
+  .mini-bar-fill { height: 100%; border-radius: 7px; transition: width 0.5s ease; }
+
+  .empty-text {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 14px;
+    padding: 20px;
+  }
+
+  /* Category Manager Tab */
+  .cat-list-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .cat-list-item:hover { background: #222; }
+
+  .cat-color-dot {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .cat-list-emoji { font-size: 20px; }
+  .cat-list-name { flex: 1; font-size: 15px; }
+  .cat-list-count { font-size: 13px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+
+  .cat-delete-btn {
+    background: none;
+    border: none;
+    color: #ff4444;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px 8px;
+    opacity: 0.6;
+    transition: opacity 0.15s;
+  }
+
+  .cat-delete-btn:hover { opacity: 1; }
+
+  .add-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    margin-top: 16px;
+    transition: opacity 0.15s;
+  }
+
+  .add-btn:hover { opacity: 0.85; }
+
+  /* Edit Modal */
+  .edit-modal {
+    background: var(--card);
+    width: 100%;
+    max-width: 430px;
+    border-radius: 20px 20px 0 0;
+    padding: 20px 20px max(20px, env(safe-area-inset-bottom));
+    animation: slideUp 0.3s ease;
+  }
+
+  .edit-modal h3 { text-align: center; margin-bottom: 20px; }
+
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+
+  .form-input {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--bg);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 15px;
+    font-family: inherit;
+    outline: none;
+  }
+
+  .form-input:focus { border-color: var(--accent); }
+
+  .color-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 8px;
+  }
+
+  .color-option {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+
+  .color-option:hover { transform: scale(1.15); }
+  .color-option.selected { border-color: white; }
+
+  .form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .btn-cancel, .btn-save {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    border: none;
+  }
+
+  .btn-cancel { background: #333; color: var(--text); }
+  .btn-save { background: var(--accent); color: white; }
+
+  /* Unassigned card */
+  .unassigned-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+  }
+
+  .unassigned-icon { font-size: 28px; }
+  .unassigned-title { font-size: 14px; font-weight: 600; }
+  .unassigned-sub { font-size: 12px; color: var(--text-secondary); }
+</style>
+</head>
+<body>
+
+<!-- Dots Screen -->
+<div id="screen-dots" class="screen active">
+  <h1 class="screen-title">土日ドット</h1>
+  <div class="year-selector">
+    <button onclick="changeYear(-1)">&#8249;</button>
+    <span class="year-text" id="year-label"></span>
+    <button onclick="changeYear(1)">&#8250;</button>
+  </div>
+  <div class="stats-row" id="stats-row"></div>
+  <div class="legend" id="legend"></div>
+  <div id="dot-months"></div>
+</div>
+
+<!-- Summary Screen -->
+<div id="screen-summary" class="screen">
+  <h1 class="screen-title">まとめ</h1>
+  <div id="summary-content"></div>
+</div>
+
+<!-- Category Screen -->
+<div id="screen-category" class="screen">
+  <h1 class="screen-title">カテゴリ</h1>
+  <div id="cat-list"></div>
+  <button class="add-btn" onclick="showEditModal(null)">＋ カテゴリを追加</button>
+</div>
+
+<!-- Tab Bar -->
+<div class="tab-bar">
+  <button class="tab-item active" onclick="switchTab('dots')">
+    <svg viewBox="0 0 24 24"><circle cx="5" cy="5" r="2.5"/><circle cx="12" cy="5" r="2.5"/><circle cx="19" cy="5" r="2.5"/><circle cx="5" cy="12" r="2.5"/><circle cx="12" cy="12" r="2.5"/><circle cx="19" cy="12" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="12" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/></svg>
+    <span>ドット</span>
+  </button>
+  <button class="tab-item" onclick="switchTab('summary')">
+    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/><path d="M12 4v8l6 3.5"/></svg>
+    <span>まとめ</span>
+  </button>
+  <button class="tab-item" onclick="switchTab('category')">
+    <svg viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/></svg>
+    <span>カテゴリ</span>
+  </button>
+</div>
+
+<!-- Category Picker Modal -->
+<div class="modal-overlay" id="picker-modal" onclick="closePickerModal(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-date" id="picker-date"></div>
+    <div class="modal-current" id="picker-current"></div>
+    <div class="category-grid" id="picker-grid"></div>
+    <input class="note-input" id="picker-note" placeholder="この日の予定やメモ..." />
+  </div>
+</div>
+
+<!-- Category Edit Modal -->
+<div class="modal-overlay" id="edit-modal" onclick="closeEditModal(event)">
+  <div class="edit-modal">
+    <div class="modal-handle"></div>
+    <h3 id="edit-title">カテゴリ追加</h3>
+    <div class="form-group">
+      <div class="form-label">カテゴリ名</div>
+      <input class="form-input" id="edit-name" placeholder="例: 旅行" />
+    </div>
+    <div class="form-group">
+      <div class="form-label">絵文字</div>
+      <input class="form-input" id="edit-emoji" placeholder="例: ✈️" maxlength="2" />
+    </div>
+    <div class="form-group">
+      <div class="form-label">色</div>
+      <div class="color-grid" id="edit-colors"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closeEditModal()">キャンセル</button>
+      <button class="btn-save" onclick="saveCategory()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ====== State ======
+const COLOR_OPTIONS = [
+  '#FF6B6B','#4ECDC4','#FFE66D','#95E1D3',
+  '#F38181','#AA96DA','#FCBAD3','#A8E6CF',
+  '#FFD93D','#6C5CE7','#74B9FF','#FD79A8',
+  '#00B894','#E17055','#0984E3','#636E72'
+];
+
+const DEFAULT_CATEGORIES = [
+  { id: crypto.randomUUID(), name: '旅行', color: '#FF6B6B', emoji: '✈️' },
+  { id: crypto.randomUUID(), name: '趣味', color: '#4ECDC4', emoji: '🎨' },
+  { id: crypto.randomUUID(), name: '家族', color: '#FFE66D', emoji: '👨‍👩‍👧‍👦' },
+  { id: crypto.randomUUID(), name: '勉強', color: '#95E1D3', emoji: '📚' },
+  { id: crypto.randomUUID(), name: '運動', color: '#F38181', emoji: '🏃' },
+  { id: crypto.randomUUID(), name: '休息', color: '#AA96DA', emoji: '😴' },
+  { id: crypto.randomUUID(), name: '友達', color: '#FCBAD3', emoji: '🍻' },
+];
+
+let state = loadState();
+let selectedDayIndex = null;
+let editingCategoryId = null;
+let editSelectedColor = '#FF6B6B';
+
+function loadState() {
+  const saved = localStorage.getItem('weekendDots');
+  if (saved) {
+    const s = JSON.parse(saved);
+    // Ensure dates are Date objects
+    s.days = s.days.map(d => ({ ...d, date: new Date(d.date) }));
+    return s;
+  }
+  const year = new Date().getFullYear();
+  return {
+    year,
+    categories: DEFAULT_CATEGORIES,
+    days: generateWeekendDays(year),
+  };
+}
+
+function saveState() {
+  localStorage.setItem('weekendDots', JSON.stringify(state));
+}
+
+function generateWeekendDays(year) {
+  const days = [];
+  const start = new Date(year, 0, 1);
+  const end = new Date(year + 1, 0, 1);
+  const d = new Date(start);
+  while (d < end) {
+    const wd = d.getDay();
+    if (wd === 0 || wd === 6) {
+      days.push({
+        date: new Date(d),
+        categoryId: null,
+        note: '',
+      });
+    }
+    d.setDate(d.getDate() + 1);
+  }
+  return days;
+}
+
+// ====== Tab Switching ======
+function switchTab(tab) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  document.getElementById(`screen-${tab}`).classList.add('active');
+  document.querySelectorAll('.tab-item')[['dots','summary','category'].indexOf(tab)].classList.add('active');
+
+  if (tab === 'dots') renderDots();
+  if (tab === 'summary') renderSummary();
+  if (tab === 'category') renderCategoryList();
+}
+
+// ====== Year Change ======
+function changeYear(delta) {
+  state.year += delta;
+  const oldDays = state.days;
+  state.days = generateWeekendDays(state.year);
+  // Preserve assignments
+  state.days = state.days.map(nd => {
+    const match = oldDays.find(od =>
+      od.date.getFullYear() === nd.date.getFullYear() &&
+      od.date.getMonth() === nd.date.getMonth() &&
+      od.date.getDate() === nd.date.getDate()
+    );
+    return match || nd;
+  });
+  saveState();
+  renderDots();
+}
+
+// ====== Helpers ======
+const today = new Date();
+today.setHours(0,0,0,0);
+
+function isToday(d) {
+  return d.getFullYear() === today.getFullYear() &&
+         d.getMonth() === today.getMonth() &&
+         d.getDate() === today.getDate();
+}
+
+function isPast(d) {
+  const dd = new Date(d);
+  dd.setHours(0,0,0,0);
+  return dd < today;
+}
+
+function formatDate(d) {
+  const days = ['日','月','火','水','木','金','土'];
+  return `${d.getMonth()+1}/${d.getDate()} (${days[d.getDay()]})`;
+}
+
+function getCat(id) {
+  return state.categories.find(c => c.id === id) || null;
+}
+
+// ====== Render Dots Screen ======
+function renderDots() {
+  document.getElementById('year-label').textContent = `${state.year}年`;
+
+  const total = state.days.length;
+  const past = state.days.filter(d => isPast(d.date)).length;
+  const remaining = state.days.filter(d => !isPast(d.date) && !isToday(d.date)).length;
+  const unassigned = state.days.filter(d => !d.categoryId).length;
+
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-badge"><div class="stat-value">${total}</div><div class="stat-label">土日の合計</div></div>
+    <div class="stat-badge stat-blue"><div class="stat-value">${remaining}</div><div class="stat-label">残りの日数</div></div>
+    <div class="stat-badge stat-orange"><div class="stat-value">${unassigned}</div><div class="stat-label">未割当</div></div>
+  `;
+
+  // Legend
+  let legendHtml = `<div class="legend-item"><div class="legend-dot" style="background:#2a2a2a"></div>未割当</div>`;
+  state.categories.forEach(c => {
+    legendHtml += `<div class="legend-item"><div class="legend-dot" style="background:${c.color}"></div>${c.emoji} ${c.name}</div>`;
+  });
+  document.getElementById('legend').innerHTML = legendHtml;
+
+  // Group by month
+  const months = {};
+  state.days.forEach((d, i) => {
+    const m = d.date.getMonth() + 1;
+    if (!months[m]) months[m] = [];
+    months[m].push({ ...d, index: i });
+  });
+
+  let html = '';
+  Object.keys(months).sort((a,b) => a - b).forEach(m => {
+    html += `<div class="month-section"><div class="month-label">${m}月</div><div class="dot-grid">`;
+    months[m].forEach(d => {
+      const cat = getCat(d.categoryId);
+      const isSat = d.date.getDay() === 6;
+      const todayClass = isToday(d.date) ? ' today' : '';
+      let bg, textColor;
+      if (cat) {
+        bg = cat.color;
+        textColor = 'rgba(255,255,255,0.9)';
+      } else if (isPast(d.date)) {
+        bg = '#1e1e1e';
+        textColor = '#444';
+      } else {
+        bg = '#2a2a2a';
+        textColor = '#555';
+      }
+      html += `<div class="dot${todayClass}" style="background:${bg};color:${textColor}" onclick="openPicker(${d.index})"><span class="dot-text">${isSat ? '土' : '日'}</span></div>`;
+    });
+    html += '</div></div>';
+  });
+  document.getElementById('dot-months').innerHTML = html;
+}
+
+// ====== Category Picker ======
+function openPicker(dayIndex) {
+  selectedDayIndex = dayIndex;
+  const day = state.days[dayIndex];
+  document.getElementById('picker-date').textContent = formatDate(day.date);
+
+  const cat = getCat(day.categoryId);
+  document.getElementById('picker-current').textContent = cat ? `現在: ${cat.emoji} ${cat.name}` : '';
+
+  let grid = `<button class="category-btn${!day.categoryId ? ' selected' : ''}" onclick="assignCategory(null)" style="background:rgba(255,255,255,0.05)"><span class="cat-emoji">⬜</span><span class="cat-name">なし</span></button>`;
+  state.categories.forEach(c => {
+    const sel = day.categoryId === c.id ? ' selected' : '';
+    grid += `<button class="category-btn${sel}" onclick="assignCategory('${c.id}')" style="background:${c.color}22"><span class="cat-emoji">${c.emoji}</span><span class="cat-name">${c.name}</span></button>`;
+  });
+  document.getElementById('picker-grid').innerHTML = grid;
+  document.getElementById('picker-note').value = day.note || '';
+  document.getElementById('picker-modal').classList.add('active');
+}
+
+function assignCategory(catId) {
+  state.days[selectedDayIndex].categoryId = catId;
+  saveState();
+  closePickerModal();
+  renderDots();
+}
+
+function closePickerModal(e) {
+  if (e && e.target !== document.getElementById('picker-modal')) return;
+  // Save note
+  if (selectedDayIndex !== null) {
+    state.days[selectedDayIndex].note = document.getElementById('picker-note').value;
+    saveState();
+  }
+  document.getElementById('picker-modal').classList.remove('active');
+}
+
+// ====== Render Summary ======
+function renderSummary() {
+  const total = state.days.length;
+  const past = state.days.filter(d => isPast(d.date)).length;
+  const remaining = state.days.filter(d => !isPast(d.date) && !isToday(d.date)).length;
+  const unassigned = state.days.filter(d => !d.categoryId).length;
+  const pct = total > 0 ? Math.round(past / total * 100) : 0;
+
+  // Category breakdown
+  const counts = {};
+  state.days.forEach(d => {
+    if (d.categoryId) counts[d.categoryId] = (counts[d.categoryId] || 0) + 1;
+  });
+  const breakdown = state.categories
+    .map(c => ({ cat: c, count: counts[c.id] || 0 }))
+    .filter(x => x.count > 0)
+    .sort((a, b) => b.count - a.count);
+  const maxCount = breakdown.length > 0 ? breakdown[0].count : 1;
+
+  // SVG ring
+  const r = 62, c = 75, stroke = 12;
+  const circ = 2 * Math.PI * r;
+  const offset = circ * (1 - pct / 100);
+
+  let breakdownHtml = '';
+  if (breakdown.length === 0) {
+    breakdownHtml = '<div class="empty-text">まだカテゴリが割り当てられていません</div>';
+  } else {
+    breakdown.forEach(b => {
+      const w = (b.count / maxCount * 100).toFixed(1);
+      breakdownHtml += `
+        <div class="breakdown-row">
+          <span class="breakdown-emoji">${b.cat.emoji}</span>
+          <span class="breakdown-name">${b.cat.name}</span>
+          <span class="breakdown-count">${b.count}日</span>
+          <div class="mini-bar"><div class="mini-bar-fill" style="width:${w}%;background:${b.cat.color}"></div></div>
+        </div>`;
+    });
+  }
+
+  document.getElementById('summary-content').innerHTML = `
+    <div class="big-number-card">
+      <div class="big-number">${total}</div>
+      <div class="big-label">${state.year}年の土日</div>
+      <div class="sub-stats">
+        <div><div class="sub-stat-value">${past}</div><div class="sub-stat-label">使った日</div></div>
+        <div><div class="sub-stat-value" style="color:#5b7fff">${remaining}</div><div class="sub-stat-label">残りの日</div></div>
+      </div>
+    </div>
+    <div class="progress-card">
+      <h3>消化率</h3>
+      <div class="ring-container">
+        <svg width="150" height="150" viewBox="0 0 150 150">
+          <circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="#222" stroke-width="${stroke}"/>
+          <circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="url(#grad)" stroke-width="${stroke}"
+            stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${offset}"
+            style="transition:stroke-dashoffset 1s ease"/>
+          <defs>
+            <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#5b7fff"/>
+              <stop offset="50%" stop-color="#c084fc"/>
+              <stop offset="100%" stop-color="#f472b6"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="ring-label">
+          <div class="ring-percent">${pct}%</div>
+          <div class="ring-sub">経過</div>
+        </div>
+      </div>
+    </div>
+    <div class="breakdown-card">
+      <h3>カテゴリ別</h3>
+      ${breakdownHtml}
+    </div>
+    ${unassigned > 0 ? `
+    <div class="unassigned-card">
+      <div class="unassigned-icon">⭕</div>
+      <div>
+        <div class="unassigned-title">${unassigned}日が未割当</div>
+        <div class="unassigned-sub">ドットタブで予定を入れましょう</div>
+      </div>
+    </div>` : ''}
+  `;
+}
+
+// ====== Category Manager ======
+function renderCategoryList() {
+  let html = '';
+  state.categories.forEach(c => {
+    const count = state.days.filter(d => d.categoryId === c.id).length;
+    html += `
+      <div class="cat-list-item" onclick="showEditModal('${c.id}')">
+        <div class="cat-color-dot" style="background:${c.color}"></div>
+        <span class="cat-list-emoji">${c.emoji}</span>
+        <span class="cat-list-name">${c.name}</span>
+        <span class="cat-list-count">${count}日</span>
+        <button class="cat-delete-btn" onclick="event.stopPropagation();deleteCategory('${c.id}')">✕</button>
+      </div>`;
+  });
+  document.getElementById('cat-list').innerHTML = html;
+}
+
+function deleteCategory(id) {
+  if (!confirm('このカテゴリを削除しますか？')) return;
+  state.categories = state.categories.filter(c => c.id !== id);
+  state.days.forEach(d => { if (d.categoryId === id) d.categoryId = null; });
+  saveState();
+  renderCategoryList();
+}
+
+function showEditModal(id) {
+  editingCategoryId = id;
+  const cat = id ? getCat(id) : null;
+  document.getElementById('edit-title').textContent = cat ? 'カテゴリ編集' : 'カテゴリ追加';
+  document.getElementById('edit-name').value = cat ? cat.name : '';
+  document.getElementById('edit-emoji').value = cat ? cat.emoji : '';
+  editSelectedColor = cat ? cat.color : '#FF6B6B';
+
+  let colorsHtml = '';
+  COLOR_OPTIONS.forEach(hex => {
+    colorsHtml += `<div class="color-option${editSelectedColor === hex ? ' selected' : ''}" style="background:${hex}" onclick="selectEditColor('${hex}')"></div>`;
+  });
+  document.getElementById('edit-colors').innerHTML = colorsHtml;
+  document.getElementById('edit-modal').classList.add('active');
+}
+
+function selectEditColor(hex) {
+  editSelectedColor = hex;
+  document.querySelectorAll('.color-option').forEach(el => {
+    el.classList.toggle('selected', el.style.background === hex || rgbToHex(el.style.background) === hex.toLowerCase());
+  });
+}
+
+function rgbToHex(rgb) {
+  if (rgb.startsWith('#')) return rgb.toLowerCase();
+  const m = rgb.match(/(\d+)/g);
+  if (!m) return rgb;
+  return '#' + m.slice(0,3).map(x => parseInt(x).toString(16).padStart(2,'0')).join('');
+}
+
+function saveCategory() {
+  const name = document.getElementById('edit-name').value.trim();
+  const emoji = document.getElementById('edit-emoji').value.trim();
+  if (!name || !emoji) return;
+
+  if (editingCategoryId) {
+    const cat = getCat(editingCategoryId);
+    if (cat) {
+      cat.name = name;
+      cat.emoji = emoji;
+      cat.color = editSelectedColor;
+    }
+  } else {
+    state.categories.push({
+      id: crypto.randomUUID(),
+      name, emoji, color: editSelectedColor,
+    });
+  }
+  saveState();
+  closeEditModal();
+  renderCategoryList();
+  renderDots();
+}
+
+function closeEditModal(e) {
+  if (e && e.target !== document.getElementById('edit-modal')) return;
+  document.getElementById('edit-modal').classList.remove('active');
+}
+
+// ====== Init ======
+renderDots();
+</script>
+</body>
+</html>
