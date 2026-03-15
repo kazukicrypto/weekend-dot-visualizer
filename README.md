@@ -1,0 +1,2 @@
+# weekend-dot-visualizer
+年間の週末をドットグリッドで可視化するiPhoneフレンドリーなReactアプリ
