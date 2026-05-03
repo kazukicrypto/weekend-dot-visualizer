@@ -2,8 +2,10 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0b1020">
 <title>Tap Runner</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -32,70 +34,141 @@
     top: env(safe-area-inset-top, 12px);
     left: 0; right: 0;
     padding: 12px 18px;
-    display: flex; justify-content: space-between;
+    display: flex; justify-content: space-between; align-items: center;
     font-weight: 700;
-    font-size: 18px;
+    font-size: 16px;
     text-shadow: 0 2px 4px rgba(0,0,0,0.4);
     pointer-events: none;
   }
-  #overlay {
+  #hud .group { display: flex; gap: 14px; align-items: center; }
+  #hud .pill {
+    background: rgba(0,0,0,0.28);
+    padding: 6px 12px;
+    border-radius: 999px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  #muteBtn {
+    pointer-events: auto;
+    background: rgba(0,0,0,0.28);
+    border: none;
+    color: #fff;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    font-size: 16px;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  #overlay, #rotate {
     position: absolute;
     inset: 0;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
-    background: rgba(11,16,32,0.78);
+    background: rgba(11,16,32,0.82);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
     text-align: center;
     padding: 24px;
     transition: opacity 0.25s ease;
+    z-index: 10;
   }
-  #overlay.hidden { opacity: 0; pointer-events: none; }
+  #overlay.hidden, #rotate.hidden { opacity: 0; pointer-events: none; }
   #overlay h1 {
-    font-size: 42px;
+    font-size: 38px;
     margin-bottom: 8px;
     letter-spacing: 0.04em;
   }
   #overlay p {
-    font-size: 16px;
+    font-size: 15px;
     opacity: 0.85;
-    margin-bottom: 28px;
-    line-height: 1.6;
+    margin-bottom: 22px;
+    line-height: 1.7;
   }
   #overlay .stat {
     font-size: 14px;
-    opacity: 0.7;
-    margin-top: 12px;
+    opacity: 0.75;
+    margin-top: 14px;
+    letter-spacing: 0.05em;
   }
   #startBtn {
     background: linear-gradient(135deg, #ffb74d, #ff7043);
     color: #fff;
     border: none;
     border-radius: 999px;
-    padding: 16px 48px;
-    font-size: 20px;
+    padding: 14px 44px;
+    font-size: 19px;
     font-weight: 700;
     cursor: pointer;
     box-shadow: 0 8px 24px rgba(255,112,67,0.45);
     transition: transform 0.1s ease;
   }
   #startBtn:active { transform: scale(0.96); }
-  .hint { font-size: 13px; opacity: 0.6; margin-top: 18px; }
+  .hint { font-size: 12px; opacity: 0.55; margin-top: 16px; }
+  .legend {
+    display: flex; gap: 18px; flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 8px;
+    margin-bottom: 16px;
+    font-size: 12px;
+    opacity: 0.85;
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border-radius: 3px;
+  }
+  #rotate {
+    z-index: 20;
+  }
+  #rotate .icon {
+    font-size: 56px;
+    margin-bottom: 18px;
+    animation: rot 2s ease-in-out infinite;
+  }
+  #rotate p { font-size: 16px; opacity: 0.9; line-height: 1.7; }
+  @keyframes rot {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(-90deg); }
+  }
+  /* Show rotate prompt only when in portrait on phones */
+  #rotate { display: none; }
+  @media (orientation: portrait) and (max-width: 900px) {
+    #rotate { display: flex; }
+    #rotate.hidden { display: none; }
+  }
 </style>
 </head>
 <body>
 <div id="wrap">
   <canvas id="game"></canvas>
   <div id="hud">
-    <div>SCORE <span id="score">0</span></div>
-    <div>BEST <span id="best">0</span></div>
+    <div class="group">
+      <div class="pill">SCORE <span id="score">0</span></div>
+      <div class="pill">BEST <span id="best">0</span></div>
+    </div>
+    <div class="group">
+      <div class="pill">仲間 <span id="allies">0</span></div>
+      <button id="muteBtn" aria-label="mute">♪</button>
+    </div>
   </div>
   <div id="overlay">
     <h1 id="title">TAP RUNNER</h1>
-    <p id="desc">タップでジャンプ。<br>もう一度タップで2段ジャンプ。<br>障害物を避けて走り続けよう！</p>
+    <p id="desc">タップでジャンプ。もう一度で2段ジャンプ。<br>赤い敵は避ける／<b style="color:#b39ddb">紫の敵は上から踏むと仲間化</b>！<br>仲間はジャンプ回数を増やしダメージを肩代わりします。</p>
+    <div class="legend">
+      <span><i style="background:#ef5350"></i>避ける（スパイク）</span>
+      <span><i style="background:#7e57c2"></i>避ける（ブロック）</span>
+      <span><i style="background:#26c6da"></i>避ける（浮遊）</span>
+      <span><i style="background:#ce93d8"></i>踏んで仲間化</span>
+    </div>
     <button id="startBtn">START</button>
     <div class="stat" id="lastScore"></div>
     <div class="hint">SPACE / クリック / タップ</div>
+  </div>
+  <div id="rotate">
+    <div class="icon">📱</div>
+    <p>横向きにしてください<br><small style="opacity:0.7">Please rotate to landscape</small></p>
   </div>
 </div>
 <script>
@@ -104,12 +177,83 @@
   const ctx = canvas.getContext('2d');
   const scoreEl = document.getElementById('score');
   const bestEl = document.getElementById('best');
+  const alliesEl = document.getElementById('allies');
   const overlay = document.getElementById('overlay');
+  const rotateEl = document.getElementById('rotate');
   const startBtn = document.getElementById('startBtn');
   const titleEl = document.getElementById('title');
   const descEl = document.getElementById('desc');
   const lastScoreEl = document.getElementById('lastScore');
+  const muteBtn = document.getElementById('muteBtn');
 
+  // ===== Audio (Web Audio API, synthesized) =====
+  const Sfx = {
+    ctx: null,
+    muted: localStorage.getItem('tapRunnerMuted') === '1',
+    init() {
+      if (this.ctx) return;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      this.ctx = new AC();
+      this.master = this.ctx.createGain();
+      this.master.gain.value = 0.6;
+      this.master.connect(this.ctx.destination);
+    },
+    resume() { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); },
+    tone(freq, dur, type = 'square', vol = 0.18, slideTo = null) {
+      if (this.muted || !this.ctx) return;
+      const t = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, t);
+      if (slideTo !== null) osc.frequency.exponentialRampToValueAtTime(Math.max(40, slideTo), t + dur);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+      osc.connect(g).connect(this.master);
+      osc.start(t);
+      osc.stop(t + dur + 0.02);
+    },
+    seq(notes) {
+      let delay = 0;
+      for (const n of notes) {
+        setTimeout(() => this.tone(n.f, n.d, n.t || 'square', n.v ?? 0.18, n.s ?? null), delay);
+        delay += (n.gap ?? n.d * 700);
+      }
+    },
+    jump() { this.tone(520, 0.10, 'square', 0.16, 760); },
+    doubleJump() { this.tone(740, 0.10, 'square', 0.16, 1100); },
+    recruit() {
+      this.seq([
+        { f: 660, d: 0.08, t: 'triangle', v: 0.20 },
+        { f: 880, d: 0.08, t: 'triangle', v: 0.20 },
+        { f: 1175, d: 0.18, t: 'triangle', v: 0.22 },
+      ]);
+    },
+    shield() { this.tone(220, 0.25, 'sawtooth', 0.20, 110); },
+    hit() {
+      this.seq([
+        { f: 330, d: 0.12, t: 'square', v: 0.22 },
+        { f: 220, d: 0.14, t: 'square', v: 0.22 },
+        { f: 110, d: 0.32, t: 'square', v: 0.22, s: 60 },
+      ]);
+    },
+    score() { this.tone(1320, 0.06, 'triangle', 0.10); },
+  };
+
+  function updateMuteUI() {
+    muteBtn.textContent = Sfx.muted ? '🔇' : '♪';
+  }
+  muteBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    Sfx.init();
+    Sfx.muted = !Sfx.muted;
+    localStorage.setItem('tapRunnerMuted', Sfx.muted ? '1' : '0');
+    updateMuteUI();
+  });
+  updateMuteUI();
+
+  // ===== Canvas sizing =====
   const DPR = Math.min(window.devicePixelRatio || 1, 2);
   let W = 0, H = 0;
   const GROUND_RATIO = 0.82;
@@ -127,13 +271,16 @@
     groundY = H * GROUND_RATIO;
   }
   window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', () => setTimeout(resize, 200));
   resize();
 
+  // ===== Constants =====
   const GRAVITY = 2400;
   const JUMP_VELOCITY = -780;
   const DOUBLE_JUMP_VELOCITY = -680;
   const BASE_SPEED = 320;
-  const MAX_SPEED = 720;
+  const MAX_SPEED = 760;
+  const INVULN_TIME = 1.2;
 
   const state = {
     running: false,
@@ -143,12 +290,16 @@
     score: 0,
     best: parseInt(localStorage.getItem('tapRunnerBest') || '0', 10),
     timeSinceObstacle: 0,
-    nextObstacleIn: 1.2,
+    nextObstacleIn: 1.4,
     obstacles: [],
     clouds: [],
     particles: [],
+    allies: [],
     bgScroll: 0,
     shake: 0,
+    invuln: 0,
+    flash: 0,
+    obstacleCount: 0,
   };
 
   bestEl.textContent = state.best;
@@ -159,9 +310,11 @@
     w: 38, h: 46,
     onGround: true,
     jumps: 0,
-    maxJumps: 2,
     runFrame: 0,
+    trail: [], // history positions for allies to follow
   };
+
+  function maxJumps() { return 2 + state.allies.length; }
 
   function resetPlayer() {
     player.x = W * 0.22;
@@ -170,9 +323,12 @@
     player.onGround = true;
     player.jumps = 0;
     player.runFrame = 0;
+    player.trail = [];
   }
 
   function reset() {
+    Sfx.init();
+    Sfx.resume();
     state.running = true;
     state.over = false;
     state.speed = BASE_SPEED;
@@ -183,17 +339,22 @@
     state.obstacles = [];
     state.clouds = [];
     state.particles = [];
+    state.allies = [];
     state.shake = 0;
+    state.invuln = 0;
+    state.flash = 0;
+    state.obstacleCount = 0;
     resetPlayer();
     seedClouds();
+    alliesEl.textContent = '0';
     overlay.classList.add('hidden');
   }
 
   function seedClouds() {
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 6; i++) {
       state.clouds.push({
         x: Math.random() * W,
-        y: 40 + Math.random() * (groundY * 0.5),
+        y: 30 + Math.random() * (groundY * 0.55),
         r: 18 + Math.random() * 28,
         speed: 20 + Math.random() * 30,
       });
@@ -201,18 +362,14 @@
   }
 
   function jump() {
-    if (!state.running) {
-      if (state.over) {
-        // require button to restart on game over
-        return;
-      }
-      return;
-    }
-    if (player.jumps < player.maxJumps) {
+    if (!state.running) return;
+    if (player.jumps < maxJumps()) {
       player.vy = player.jumps === 0 ? JUMP_VELOCITY : DOUBLE_JUMP_VELOCITY;
       player.onGround = false;
       player.jumps++;
       spawnJumpPuff();
+      if (player.jumps === 1) Sfx.jump();
+      else Sfx.doubleJump();
     }
   }
 
@@ -223,10 +380,8 @@
         y: player.y + player.h,
         vx: -120 + Math.random() * 60,
         vy: -40 + Math.random() * 80,
-        life: 0.4 + Math.random() * 0.2,
-        age: 0,
-        r: 2 + Math.random() * 3,
-        c: '#ffffff',
+        life: 0.4 + Math.random() * 0.2, age: 0,
+        r: 2 + Math.random() * 3, c: '#ffffff',
       });
     }
   }
@@ -236,48 +391,55 @@
       const a = Math.random() * Math.PI * 2;
       const sp = 80 + Math.random() * 220;
       state.particles.push({
-        x, y,
-        vx: Math.cos(a) * sp,
-        vy: Math.sin(a) * sp - 60,
-        life: 0.6 + Math.random() * 0.4,
-        age: 0,
+        x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 60,
+        life: 0.6 + Math.random() * 0.4, age: 0,
         r: 2 + Math.random() * 4,
         c: Math.random() < 0.5 ? '#ff7043' : '#ffd54f',
       });
     }
   }
 
-  function spawnObstacle() {
-    const type = Math.random();
-    if (type < 0.6) {
-      // ground spike
-      const w = 22 + Math.random() * 28;
-      const h = 28 + Math.random() * 36;
-      state.obstacles.push({
-        kind: 'spike',
-        x: W + w,
-        y: groundY - h,
-        w, h,
+  function spawnRecruitBurst(x, y) {
+    for (let i = 0; i < 20; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const sp = 60 + Math.random() * 180;
+      state.particles.push({
+        x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 80,
+        life: 0.7 + Math.random() * 0.4, age: 0,
+        r: 2 + Math.random() * 3,
+        c: Math.random() < 0.5 ? '#ce93d8' : '#fff59d',
       });
-    } else if (type < 0.85) {
-      // wide low obstacle
+    }
+  }
+
+  function spawnObstacle() {
+    state.obstacleCount++;
+    // Friend appearances: every 4-6 obstacles, force a friend
+    const forceFriend = state.obstacleCount % 5 === 0;
+    const r = Math.random();
+    if (forceFriend || r < 0.18) {
+      // Friend (recruitable) - sits on ground, short
+      const w = 32, h = 32;
+      state.obstacles.push({
+        kind: 'friend',
+        x: W + w, y: groundY - h, w, h,
+        bob: Math.random() * Math.PI * 2,
+      });
+      return;
+    }
+    if (r < 0.62) {
+      const w = 22 + Math.random() * 26;
+      const h = 26 + Math.random() * 36;
+      state.obstacles.push({ kind: 'spike', x: W + w, y: groundY - h, w, h });
+    } else if (r < 0.85) {
       const w = 50 + Math.random() * 50;
       const h = 22;
-      state.obstacles.push({
-        kind: 'block',
-        x: W + w,
-        y: groundY - h,
-        w, h,
-      });
+      state.obstacles.push({ kind: 'block', x: W + w, y: groundY - h, w, h });
     } else {
-      // floating obstacle (need to slide under by not jumping high, or jump over carefully)
-      const w = 36;
-      const h = 22;
+      const w = 36, h = 22;
       state.obstacles.push({
-        kind: 'float',
-        x: W + w,
-        y: groundY - 90 - Math.random() * 40,
-        w, h,
+        kind: 'float', x: W + w,
+        y: groundY - 90 - Math.random() * 40, w, h,
       });
     }
   }
@@ -287,16 +449,40 @@
            a.y < b.y + b.h && a.y + a.h > b.y;
   }
 
+  function recruitFriend(o) {
+    state.allies.push({
+      x: player.x, y: player.y,
+      hue: 270 + Math.random() * 40,
+      bob: Math.random() * Math.PI * 2,
+    });
+    alliesEl.textContent = state.allies.length;
+    spawnRecruitBurst(o.x + o.w / 2, o.y + o.h / 2);
+    // small bounce for player
+    player.vy = -440;
+    player.onGround = false;
+    // refund a jump so it feels rewarding
+    player.jumps = Math.max(0, player.jumps - 1);
+    Sfx.recruit();
+  }
+
+  function loseAlly() {
+    state.allies.pop();
+    alliesEl.textContent = state.allies.length;
+    state.invuln = INVULN_TIME;
+    state.flash = 0.5;
+    state.shake = 0.6;
+    Sfx.shield();
+  }
+
   function update(dt) {
     if (!state.running) return;
 
-    // ramp speed up gently
     state.speed = Math.min(MAX_SPEED, state.speed + 8 * dt);
     state.distance += state.speed * dt;
-    state.score = Math.floor(state.distance / 10);
+    const newScore = Math.floor(state.distance / 10);
+    state.score = newScore;
     scoreEl.textContent = state.score;
 
-    // bg scroll
     state.bgScroll = (state.bgScroll + state.speed * dt * 0.5) % 1000;
 
     // player physics
@@ -312,16 +498,32 @@
     }
     player.runFrame += dt * 12;
 
-    // obstacles
+    // record trail for allies
+    player.trail.unshift({ x: player.x + player.w / 2, y: player.y + player.h / 2 });
+    if (player.trail.length > 200) player.trail.length = 200;
+
+    // allies follow trail
+    for (let i = 0; i < state.allies.length; i++) {
+      const idx = Math.min(player.trail.length - 1, 18 + i * 14);
+      const t = player.trail[idx];
+      if (t) {
+        state.allies[i].x = t.x;
+        state.allies[i].y = t.y;
+      }
+      state.allies[i].bob += dt * 6;
+    }
+
+    // obstacles spawn
     state.timeSinceObstacle += dt;
     if (state.timeSinceObstacle >= state.nextObstacleIn) {
       spawnObstacle();
       state.timeSinceObstacle = 0;
       const speedFactor = state.speed / BASE_SPEED;
-      state.nextObstacleIn = (0.9 + Math.random() * 1.1) / Math.max(1, speedFactor * 0.7);
+      state.nextObstacleIn = (0.9 + Math.random() * 1.0) / Math.max(1, speedFactor * 0.7);
     }
     for (const o of state.obstacles) {
       o.x -= state.speed * dt;
+      if (o.kind === 'friend') o.bob += dt * 5;
     }
     state.obstacles = state.obstacles.filter(o => o.x + o.w > -20);
 
@@ -330,7 +532,7 @@
       c.x -= c.speed * dt;
       if (c.x + c.r < 0) {
         c.x = W + c.r;
-        c.y = 40 + Math.random() * (groundY * 0.5);
+        c.y = 30 + Math.random() * (groundY * 0.55);
         c.r = 18 + Math.random() * 28;
       }
     }
@@ -344,16 +546,43 @@
     }
     state.particles = state.particles.filter(p => p.age < p.life);
 
+    // timers
+    if (state.invuln > 0) state.invuln = Math.max(0, state.invuln - dt);
+    if (state.flash > 0) state.flash = Math.max(0, state.flash - dt);
+    if (state.shake > 0) state.shake = Math.max(0, state.shake - dt * 4);
+
     // collisions
     const pBox = { x: player.x + 6, y: player.y + 4, w: player.w - 12, h: player.h - 6 };
-    for (const o of state.obstacles) {
-      if (rectsOverlap(pBox, o)) {
-        gameOver();
-        break;
+    for (let i = state.obstacles.length - 1; i >= 0; i--) {
+      const o = state.obstacles[i];
+      if (!rectsOverlap(pBox, o)) continue;
+
+      if (o.kind === 'friend') {
+        // stomp from above to recruit, side hit = damage
+        const stomping = player.vy > 60 && (pBox.y + pBox.h) < o.y + o.h * 0.6;
+        if (stomping) {
+          recruitFriend(o);
+          state.obstacles.splice(i, 1);
+        } else if (state.invuln <= 0) {
+          if (state.allies.length > 0) {
+            loseAlly();
+            state.obstacles.splice(i, 1);
+          } else {
+            gameOver();
+            break;
+          }
+        }
+      } else {
+        if (state.invuln > 0) continue;
+        if (state.allies.length > 0) {
+          loseAlly();
+          state.obstacles.splice(i, 1);
+        } else {
+          gameOver();
+          break;
+        }
       }
     }
-
-    if (state.shake > 0) state.shake = Math.max(0, state.shake - dt * 4);
   }
 
   function gameOver() {
@@ -361,6 +590,7 @@
     state.over = true;
     state.shake = 1;
     spawnHitBurst(player.x + player.w / 2, player.y + player.h / 2);
+    Sfx.hit();
     if (state.score > state.best) {
       state.best = state.score;
       localStorage.setItem('tapRunnerBest', String(state.best));
@@ -369,22 +599,18 @@
     setTimeout(() => {
       titleEl.textContent = 'GAME OVER';
       descEl.innerHTML = 'もう一度挑戦しよう！';
-      lastScoreEl.textContent = `SCORE  ${state.score}    BEST  ${state.best}`;
+      lastScoreEl.textContent = `SCORE  ${state.score}    BEST  ${state.best}    仲間  ${state.allies.length}`;
       startBtn.textContent = 'RETRY';
       overlay.classList.remove('hidden');
-    }, 600);
+    }, 700);
   }
 
+  // ===== Drawing =====
   function drawGround() {
-    // ground band
     ctx.fillStyle = '#1c2440';
     ctx.fillRect(0, groundY, W, H - groundY);
-
-    // ground top line glow
     ctx.fillStyle = '#5b6cb8';
     ctx.fillRect(0, groundY - 2, W, 2);
-
-    // moving stripes
     ctx.fillStyle = 'rgba(255,255,255,0.07)';
     const stripeW = 30;
     const offset = -((state.distance) % (stripeW * 2));
@@ -404,45 +630,67 @@
     }
   }
 
-  function drawPlayer() {
-    const px = player.x;
-    const py = player.y;
-    const w = player.w;
-    const h = player.h;
+  function drawAllies() {
+    for (let i = 0; i < state.allies.length; i++) {
+      const a = state.allies[i];
+      const bob = Math.sin(a.bob) * 3;
+      const r = 12;
+      // shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath();
+      ctx.ellipse(a.x, groundY + 4, r * 0.8, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // body
+      ctx.fillStyle = `hsl(${a.hue}, 60%, 65%)`;
+      ctx.beginPath();
+      ctx.arc(a.x, a.y + bob, r, 0, Math.PI * 2);
+      ctx.fill();
+      // eye
+      ctx.fillStyle = '#1a1a2e';
+      ctx.beginPath();
+      ctx.arc(a.x + 3, a.y - 2 + bob, 2, 0, Math.PI * 2);
+      ctx.fill();
+      // tiny smile
+      ctx.strokeStyle = '#1a1a2e';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(a.x + 2, a.y + 2 + bob, 3, 0, Math.PI);
+      ctx.stroke();
+    }
+  }
 
-    // shadow
+  function drawPlayer() {
+    const px = player.x, py = player.y, w = player.w, h = player.h;
+
     const shadowScale = player.onGround ? 1 : Math.max(0.4, 1 - (groundY - (py + h)) / 200);
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.beginPath();
     ctx.ellipse(px + w / 2, groundY + 4, (w / 2) * shadowScale, 5 * shadowScale, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // body
+    // invuln flicker
+    const blink = state.invuln > 0 ? (Math.floor(state.invuln * 18) % 2 === 0 ? 0.4 : 1) : 1;
+    ctx.globalAlpha = blink;
+
     ctx.fillStyle = '#ffd54f';
     roundRect(px + 4, py + 6, w - 8, h - 10, 6, true);
-
-    // head
     ctx.fillStyle = '#fff3c4';
     ctx.beginPath();
     ctx.arc(px + w / 2, py + 8, 9, 0, Math.PI * 2);
     ctx.fill();
-
-    // eye
     ctx.fillStyle = '#1a1a2e';
     ctx.beginPath();
     ctx.arc(px + w / 2 + 3, py + 7, 2, 0, Math.PI * 2);
     ctx.fill();
-
-    // legs (animated)
     ctx.fillStyle = '#ff7043';
     const legSwing = player.onGround ? Math.sin(player.runFrame) * 6 : -4;
     roundRect(px + 8, py + h - 6, 8, 6 + Math.max(0, legSwing), 2, true);
     roundRect(px + w - 16, py + h - 6, 8, 6 + Math.max(0, -legSwing), 2, true);
-
-    // arm
     ctx.fillStyle = '#ffb74d';
     const armSwing = player.onGround ? Math.sin(player.runFrame + Math.PI) * 4 : 6;
     roundRect(px + w - 8, py + 14 + armSwing, 6, 12, 2, true);
+
+    ctx.globalAlpha = 1;
   }
 
   function drawObstacles() {
@@ -467,13 +715,43 @@
         roundRect(o.x, o.y, o.w, o.h, 4, true);
         ctx.fillStyle = 'rgba(255,255,255,0.15)';
         ctx.fillRect(o.x + 4, o.y + 4, o.w - 8, 3);
-      } else {
+      } else if (o.kind === 'float') {
         ctx.fillStyle = '#26c6da';
         roundRect(o.x, o.y, o.w, o.h, 6, true);
         ctx.fillStyle = 'rgba(255,255,255,0.25)';
         ctx.beginPath();
         ctx.arc(o.x + o.w * 0.3, o.y + o.h * 0.4, 3, 0, Math.PI * 2);
         ctx.fill();
+      } else if (o.kind === 'friend') {
+        const bob = Math.sin(o.bob) * 2;
+        // glow ring
+        ctx.fillStyle = 'rgba(206,147,216,0.18)';
+        ctx.beginPath();
+        ctx.arc(o.x + o.w / 2, o.y + o.h / 2 + bob, o.w * 0.85, 0, Math.PI * 2);
+        ctx.fill();
+        // body
+        ctx.fillStyle = '#ce93d8';
+        roundRect(o.x + 2, o.y + 4 + bob, o.w - 4, o.h - 8, 8, true);
+        // hint arrow above (down-pointing)
+        ctx.fillStyle = '#fff59d';
+        ctx.beginPath();
+        ctx.moveTo(o.x + o.w / 2, o.y - 6 + Math.sin(o.bob * 2) * 2);
+        ctx.lineTo(o.x + o.w / 2 - 5, o.y - 14 + Math.sin(o.bob * 2) * 2);
+        ctx.lineTo(o.x + o.w / 2 + 5, o.y - 14 + Math.sin(o.bob * 2) * 2);
+        ctx.closePath();
+        ctx.fill();
+        // eyes
+        ctx.fillStyle = '#1a1a2e';
+        ctx.beginPath();
+        ctx.arc(o.x + o.w * 0.35, o.y + o.h * 0.45 + bob, 2.2, 0, Math.PI * 2);
+        ctx.arc(o.x + o.w * 0.65, o.y + o.h * 0.45 + bob, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+        // smile
+        ctx.strokeStyle = '#1a1a2e';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(o.x + o.w / 2, o.y + o.h * 0.6 + bob, 4, 0, Math.PI);
+        ctx.stroke();
       }
     }
   }
@@ -503,7 +781,6 @@
 
   function render() {
     ctx.clearRect(0, 0, W, H);
-
     let sx = 0, sy = 0;
     if (state.shake > 0) {
       sx = (Math.random() - 0.5) * 12 * state.shake;
@@ -514,11 +791,17 @@
 
     drawClouds();
     drawGround();
+    drawAllies();
     drawObstacles();
     drawPlayer();
     drawParticles();
 
     ctx.restore();
+
+    if (state.flash > 0) {
+      ctx.fillStyle = `rgba(255,255,255,${state.flash * 0.6})`;
+      ctx.fillRect(0, 0, W, H);
+    }
   }
 
   let last = performance.now();
@@ -530,27 +813,31 @@
     requestAnimationFrame(loop);
   }
 
-  // input
+  // ===== Input =====
   function onTap(e) {
     if (e.cancelable) e.preventDefault();
-    if (!state.running && !state.over) {
-      // overlay open with start button — ignore taps on canvas
-      return;
-    }
+    Sfx.init();
+    Sfx.resume();
+    if (!state.running) return;
     jump();
   }
   canvas.addEventListener('pointerdown', onTap);
   window.addEventListener('keydown', (e) => {
     if (e.code === 'Space' || e.code === 'ArrowUp') {
       e.preventDefault();
-      if (state.over) return;
-      if (!state.running) reset();
-      else jump();
+      Sfx.init();
+      Sfx.resume();
+      if (state.over || !state.running) {
+        if (overlay.classList.contains('hidden')) return;
+        reset();
+      } else jump();
+    }
+    if (e.code === 'KeyM') {
+      muteBtn.click();
     }
   });
-  startBtn.addEventListener('click', () => reset());
+  startBtn.addEventListener('click', () => { Sfx.init(); Sfx.resume(); reset(); });
 
-  // initial setup
   resetPlayer();
   seedClouds();
   requestAnimationFrame((t) => { last = t; loop(t); });
