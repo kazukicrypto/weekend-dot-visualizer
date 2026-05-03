@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Tap Runner</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #0b1020;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    color: #fff;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  #wrap {
+    position: relative;
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  canvas {
+    display: block;
+    background: linear-gradient(#1b2552 0%, #2d3a7a 60%, #4b5fb8 100%);
+    width: 100%; height: 100%;
+    image-rendering: pixelated;
+  }
+  #hud {
+    position: absolute;
+    top: env(safe-area-inset-top, 12px);
+    left: 0; right: 0;
+    padding: 12px 18px;
+    display: flex; justify-content: space-between;
+    font-weight: 700;
+    font-size: 18px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    pointer-events: none;
+  }
+  #overlay {
+    position: absolute;
+    inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: rgba(11,16,32,0.78);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    text-align: center;
+    padding: 24px;
+    transition: opacity 0.25s ease;
+  }
+  #overlay.hidden { opacity: 0; pointer-events: none; }
+  #overlay h1 {
+    font-size: 42px;
+    margin-bottom: 8px;
+    letter-spacing: 0.04em;
+  }
+  #overlay p {
+    font-size: 16px;
+    opacity: 0.85;
+    margin-bottom: 28px;
+    line-height: 1.6;
+  }
+  #overlay .stat {
+    font-size: 14px;
+    opacity: 0.7;
+    margin-top: 12px;
+  }
+  #startBtn {
+    background: linear-gradient(135deg, #ffb74d, #ff7043);
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    padding: 16px 48px;
+    font-size: 20px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(255,112,67,0.45);
+    transition: transform 0.1s ease;
+  }
+  #startBtn:active { transform: scale(0.96); }
+  .hint { font-size: 13px; opacity: 0.6; margin-top: 18px; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game"></canvas>
+  <div id="hud">
+    <div>SCORE <span id="score">0</span></div>
+    <div>BEST <span id="best">0</span></div>
+  </div>
+  <div id="overlay">
+    <h1 id="title">TAP RUNNER</h1>
+    <p id="desc">タップでジャンプ。<br>もう一度タップで2段ジャンプ。<br>障害物を避けて走り続けよう！</p>
+    <button id="startBtn">START</button>
+    <div class="stat" id="lastScore"></div>
+    <div class="hint">SPACE / クリック / タップ</div>
+  </div>
+</div>
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const scoreEl = document.getElementById('score');
+  const bestEl = document.getElementById('best');
+  const overlay = document.getElementById('overlay');
+  const startBtn = document.getElementById('startBtn');
+  const titleEl = document.getElementById('title');
+  const descEl = document.getElementById('desc');
+  const lastScoreEl = document.getElementById('lastScore');
+
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+  let W = 0, H = 0;
+  const GROUND_RATIO = 0.82;
+  let groundY = 0;
+
+  function resize() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    canvas.width = w * DPR;
+    canvas.height = h * DPR;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    W = w; H = h;
+    groundY = H * GROUND_RATIO;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  const GRAVITY = 2400;
+  const JUMP_VELOCITY = -780;
+  const DOUBLE_JUMP_VELOCITY = -680;
+  const BASE_SPEED = 320;
+  const MAX_SPEED = 720;
+
+  const state = {
+    running: false,
+    over: false,
+    speed: BASE_SPEED,
+    distance: 0,
+    score: 0,
+    best: parseInt(localStorage.getItem('tapRunnerBest') || '0', 10),
+    timeSinceObstacle: 0,
+    nextObstacleIn: 1.2,
+    obstacles: [],
+    clouds: [],
+    particles: [],
+    bgScroll: 0,
+    shake: 0,
+  };
+
+  bestEl.textContent = state.best;
+
+  const player = {
+    x: 0, y: 0,
+    vy: 0,
+    w: 38, h: 46,
+    onGround: true,
+    jumps: 0,
+    maxJumps: 2,
+    runFrame: 0,
+  };
+
+  function resetPlayer() {
+    player.x = W * 0.22;
+    player.y = groundY - player.h;
+    player.vy = 0;
+    player.onGround = true;
+    player.jumps = 0;
+    player.runFrame = 0;
+  }
+
+  function reset() {
+    state.running = true;
+    state.over = false;
+    state.speed = BASE_SPEED;
+    state.distance = 0;
+    state.score = 0;
+    state.timeSinceObstacle = 0;
+    state.nextObstacleIn = 1.4;
+    state.obstacles = [];
+    state.clouds = [];
+    state.particles = [];
+    state.shake = 0;
+    resetPlayer();
+    seedClouds();
+    overlay.classList.add('hidden');
+  }
+
+  function seedClouds() {
+    for (let i = 0; i < 5; i++) {
+      state.clouds.push({
+        x: Math.random() * W,
+        y: 40 + Math.random() * (groundY * 0.5),
+        r: 18 + Math.random() * 28,
+        speed: 20 + Math.random() * 30,
+      });
+    }
+  }
+
+  function jump() {
+    if (!state.running) {
+      if (state.over) {
+        // require button to restart on game over
+        return;
+      }
+      return;
+    }
+    if (player.jumps < player.maxJumps) {
+      player.vy = player.jumps === 0 ? JUMP_VELOCITY : DOUBLE_JUMP_VELOCITY;
+      player.onGround = false;
+      player.jumps++;
+      spawnJumpPuff();
+    }
+  }
+
+  function spawnJumpPuff() {
+    for (let i = 0; i < 8; i++) {
+      state.particles.push({
+        x: player.x + player.w * 0.3,
+        y: player.y + player.h,
+        vx: -120 + Math.random() * 60,
+        vy: -40 + Math.random() * 80,
+        life: 0.4 + Math.random() * 0.2,
+        age: 0,
+        r: 2 + Math.random() * 3,
+        c: '#ffffff',
+      });
+    }
+  }
+
+  function spawnHitBurst(x, y) {
+    for (let i = 0; i < 24; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const sp = 80 + Math.random() * 220;
+      state.particles.push({
+        x, y,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp - 60,
+        life: 0.6 + Math.random() * 0.4,
+        age: 0,
+        r: 2 + Math.random() * 4,
+        c: Math.random() < 0.5 ? '#ff7043' : '#ffd54f',
+      });
+    }
+  }
+
+  function spawnObstacle() {
+    const type = Math.random();
+    if (type < 0.6) {
+      // ground spike
+      const w = 22 + Math.random() * 28;
+      const h = 28 + Math.random() * 36;
+      state.obstacles.push({
+        kind: 'spike',
+        x: W + w,
+        y: groundY - h,
+        w, h,
+      });
+    } else if (type < 0.85) {
+      // wide low obstacle
+      const w = 50 + Math.random() * 50;
+      const h = 22;
+      state.obstacles.push({
+        kind: 'block',
+        x: W + w,
+        y: groundY - h,
+        w, h,
+      });
+    } else {
+      // floating obstacle (need to slide under by not jumping high, or jump over carefully)
+      const w = 36;
+      const h = 22;
+      state.obstacles.push({
+        kind: 'float',
+        x: W + w,
+        y: groundY - 90 - Math.random() * 40,
+        w, h,
+      });
+    }
+  }
+
+  function rectsOverlap(a, b) {
+    return a.x < b.x + b.w && a.x + a.w > b.x &&
+           a.y < b.y + b.h && a.y + a.h > b.y;
+  }
+
+  function update(dt) {
+    if (!state.running) return;
+
+    // ramp speed up gently
+    state.speed = Math.min(MAX_SPEED, state.speed + 8 * dt);
+    state.distance += state.speed * dt;
+    state.score = Math.floor(state.distance / 10);
+    scoreEl.textContent = state.score;
+
+    // bg scroll
+    state.bgScroll = (state.bgScroll + state.speed * dt * 0.5) % 1000;
+
+    // player physics
+    player.vy += GRAVITY * dt;
+    player.y += player.vy * dt;
+    if (player.y + player.h >= groundY) {
+      player.y = groundY - player.h;
+      player.vy = 0;
+      if (!player.onGround) {
+        player.onGround = true;
+        player.jumps = 0;
+      }
+    }
+    player.runFrame += dt * 12;
+
+    // obstacles
+    state.timeSinceObstacle += dt;
+    if (state.timeSinceObstacle >= state.nextObstacleIn) {
+      spawnObstacle();
+      state.timeSinceObstacle = 0;
+      const speedFactor = state.speed / BASE_SPEED;
+      state.nextObstacleIn = (0.9 + Math.random() * 1.1) / Math.max(1, speedFactor * 0.7);
+    }
+    for (const o of state.obstacles) {
+      o.x -= state.speed * dt;
+    }
+    state.obstacles = state.obstacles.filter(o => o.x + o.w > -20);
+
+    // clouds
+    for (const c of state.clouds) {
+      c.x -= c.speed * dt;
+      if (c.x + c.r < 0) {
+        c.x = W + c.r;
+        c.y = 40 + Math.random() * (groundY * 0.5);
+        c.r = 18 + Math.random() * 28;
+      }
+    }
+
+    // particles
+    for (const p of state.particles) {
+      p.age += dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 400 * dt;
+    }
+    state.particles = state.particles.filter(p => p.age < p.life);
+
+    // collisions
+    const pBox = { x: player.x + 6, y: player.y + 4, w: player.w - 12, h: player.h - 6 };
+    for (const o of state.obstacles) {
+      if (rectsOverlap(pBox, o)) {
+        gameOver();
+        break;
+      }
+    }
+
+    if (state.shake > 0) state.shake = Math.max(0, state.shake - dt * 4);
+  }
+
+  function gameOver() {
+    state.running = false;
+    state.over = true;
+    state.shake = 1;
+    spawnHitBurst(player.x + player.w / 2, player.y + player.h / 2);
+    if (state.score > state.best) {
+      state.best = state.score;
+      localStorage.setItem('tapRunnerBest', String(state.best));
+    }
+    bestEl.textContent = state.best;
+    setTimeout(() => {
+      titleEl.textContent = 'GAME OVER';
+      descEl.innerHTML = 'もう一度挑戦しよう！';
+      lastScoreEl.textContent = `SCORE  ${state.score}    BEST  ${state.best}`;
+      startBtn.textContent = 'RETRY';
+      overlay.classList.remove('hidden');
+    }, 600);
+  }
+
+  function drawGround() {
+    // ground band
+    ctx.fillStyle = '#1c2440';
+    ctx.fillRect(0, groundY, W, H - groundY);
+
+    // ground top line glow
+    ctx.fillStyle = '#5b6cb8';
+    ctx.fillRect(0, groundY - 2, W, 2);
+
+    // moving stripes
+    ctx.fillStyle = 'rgba(255,255,255,0.07)';
+    const stripeW = 30;
+    const offset = -((state.distance) % (stripeW * 2));
+    for (let x = offset; x < W; x += stripeW * 2) {
+      ctx.fillRect(x, groundY + 6, stripeW, 4);
+    }
+  }
+
+  function drawClouds() {
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    for (const c of state.clouds) {
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+      ctx.arc(c.x + c.r * 0.7, c.y + 3, c.r * 0.8, 0, Math.PI * 2);
+      ctx.arc(c.x - c.r * 0.6, c.y + 4, c.r * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function drawPlayer() {
+    const px = player.x;
+    const py = player.y;
+    const w = player.w;
+    const h = player.h;
+
+    // shadow
+    const shadowScale = player.onGround ? 1 : Math.max(0.4, 1 - (groundY - (py + h)) / 200);
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(px + w / 2, groundY + 4, (w / 2) * shadowScale, 5 * shadowScale, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // body
+    ctx.fillStyle = '#ffd54f';
+    roundRect(px + 4, py + 6, w - 8, h - 10, 6, true);
+
+    // head
+    ctx.fillStyle = '#fff3c4';
+    ctx.beginPath();
+    ctx.arc(px + w / 2, py + 8, 9, 0, Math.PI * 2);
+    ctx.fill();
+
+    // eye
+    ctx.fillStyle = '#1a1a2e';
+    ctx.beginPath();
+    ctx.arc(px + w / 2 + 3, py + 7, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // legs (animated)
+    ctx.fillStyle = '#ff7043';
+    const legSwing = player.onGround ? Math.sin(player.runFrame) * 6 : -4;
+    roundRect(px + 8, py + h - 6, 8, 6 + Math.max(0, legSwing), 2, true);
+    roundRect(px + w - 16, py + h - 6, 8, 6 + Math.max(0, -legSwing), 2, true);
+
+    // arm
+    ctx.fillStyle = '#ffb74d';
+    const armSwing = player.onGround ? Math.sin(player.runFrame + Math.PI) * 4 : 6;
+    roundRect(px + w - 8, py + 14 + armSwing, 6, 12, 2, true);
+  }
+
+  function drawObstacles() {
+    for (const o of state.obstacles) {
+      if (o.kind === 'spike') {
+        ctx.fillStyle = '#ef5350';
+        ctx.beginPath();
+        ctx.moveTo(o.x, o.y + o.h);
+        ctx.lineTo(o.x + o.w / 2, o.y);
+        ctx.lineTo(o.x + o.w, o.y + o.h);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.beginPath();
+        ctx.moveTo(o.x + o.w / 2, o.y);
+        ctx.lineTo(o.x + o.w / 2 - 3, o.y + o.h);
+        ctx.lineTo(o.x + o.w / 2 + 3, o.y + o.h);
+        ctx.closePath();
+        ctx.fill();
+      } else if (o.kind === 'block') {
+        ctx.fillStyle = '#7e57c2';
+        roundRect(o.x, o.y, o.w, o.h, 4, true);
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.fillRect(o.x + 4, o.y + 4, o.w - 8, 3);
+      } else {
+        ctx.fillStyle = '#26c6da';
+        roundRect(o.x, o.y, o.w, o.h, 6, true);
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        ctx.beginPath();
+        ctx.arc(o.x + o.w * 0.3, o.y + o.h * 0.4, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  function drawParticles() {
+    for (const p of state.particles) {
+      const alpha = 1 - p.age / p.life;
+      ctx.globalAlpha = Math.max(0, alpha);
+      ctx.fillStyle = p.c;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function roundRect(x, y, w, h, r, fill) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+    if (fill) ctx.fill();
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, W, H);
+
+    let sx = 0, sy = 0;
+    if (state.shake > 0) {
+      sx = (Math.random() - 0.5) * 12 * state.shake;
+      sy = (Math.random() - 0.5) * 12 * state.shake;
+    }
+    ctx.save();
+    ctx.translate(sx, sy);
+
+    drawClouds();
+    drawGround();
+    drawObstacles();
+    drawPlayer();
+    drawParticles();
+
+    ctx.restore();
+  }
+
+  let last = performance.now();
+  function loop(now) {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    update(dt);
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  // input
+  function onTap(e) {
+    if (e.cancelable) e.preventDefault();
+    if (!state.running && !state.over) {
+      // overlay open with start button — ignore taps on canvas
+      return;
+    }
+    jump();
+  }
+  canvas.addEventListener('pointerdown', onTap);
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' || e.code === 'ArrowUp') {
+      e.preventDefault();
+      if (state.over) return;
+      if (!state.running) reset();
+      else jump();
+    }
+  });
+  startBtn.addEventListener('click', () => reset());
+
+  // initial setup
+  resetPlayer();
+  seedClouds();
+  requestAnimationFrame((t) => { last = t; loop(t); });
+})();
+</script>
+</body>
+</html>
