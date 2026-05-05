@@ -25,15 +25,15 @@ function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save));
 
 // ===== Companions =====
 const COMPANIONS = {
-  guard:    { name: 'ガード',       rarity: 'N',  icon: '🛡️', color: '#4fc3f7', desc: 'スタート時に仲間+1' },
-  coiner:   { name: 'コインリッチ', rarity: 'N',  icon: '💰', color: '#ffeb3b', desc: 'コイン獲得+1' },
-  shooter:  { name: 'シューター',   rarity: 'N',  icon: '⚡', color: '#ff8a65', desc: '攻撃クールダウン-25%' },
-  magnet:   { name: 'マグネット',   rarity: 'R',  icon: '🧲', color: '#ce93d8', desc: 'コインを引き寄せる' },
-  healer:   { name: 'ヒーラー',     rarity: 'R',  icon: '💚', color: '#a5d6a7', desc: '15秒ごとに仲間が復活' },
-  bomber:   { name: 'ボマー',       rarity: 'R',  icon: '💣', color: '#ff5722', desc: '12秒ごとに前方を爆破' },
-  autogun:  { name: 'オートガン',   rarity: 'SR', icon: '🔫', color: '#26c6da', desc: '自動で弾を撃つ' },
-  golden:   { name: 'ゴールデン',   rarity: 'SR', icon: '✨', color: '#ffd700', desc: 'コイン獲得x2' },
-  legend:   { name: 'レジェンド',   rarity: 'SSR', icon: '👑', color: 'rainbow', desc: 'スタート+2 / 自動射撃 / コインx2' },
+  guard:    { name: 'ガード',       rarity: 'N',  icon: '🛡️', desc: 'スタート時に仲間+1' },
+  coiner:   { name: 'コインリッチ', rarity: 'N',  icon: '💰', desc: 'コイン獲得+1' },
+  shooter:  { name: 'シューター',   rarity: 'N',  icon: '⚡', desc: '攻撃クールダウン-25%' },
+  magnet:   { name: 'マグネット',   rarity: 'R',  icon: '🧲', desc: 'コインを引き寄せる' },
+  healer:   { name: 'ヒーラー',     rarity: 'R',  icon: '💚', desc: '15秒ごとに仲間が復活' },
+  bomber:   { name: 'ボマー',       rarity: 'R',  icon: '💣', desc: '12秒ごとに前方を爆破' },
+  autogun:  { name: 'オートガン',   rarity: 'SR', icon: '🔫', desc: '自動で弾を撃つ' },
+  golden:   { name: 'ゴールデン',   rarity: 'SR', icon: '✨', desc: 'コイン獲得x2' },
+  legend:   { name: 'レジェンド',   rarity: 'SSR', icon: '👑', desc: 'スタート+2 / 自動射撃 / コインx2' },
 };
 const RARITY_COLOR = { N: '#9e9e9e', R: '#42a5f5', SR: '#ffb300', SSR: '#e040fb' };
 const RARITY_WEIGHT = { N: 60, R: 28, SR: 10, SSR: 2 };
@@ -91,6 +91,7 @@ const Sfx = {
   recruit()     { this.seq([{f:660,d:0.08,t:'triangle',v:0.20},{f:880,d:0.08,t:'triangle',v:0.20},{f:1175,d:0.18,t:'triangle',v:0.22}]); },
   shield()      { this.tone(220, 0.25, 'sawtooth', 0.20, 110); },
   hit()         { this.seq([{f:330,d:0.12,v:0.22},{f:220,d:0.14,v:0.22},{f:110,d:0.32,v:0.22,s:60}]); },
+  fall()        { this.tone(660, 0.5, 'sawtooth', 0.22, 80); },
   attack()      { this.tone(880, 0.07, 'square', 0.12, 1400); },
   bossHit()     { this.tone(140, 0.12, 'sawtooth', 0.22, 80); },
   bossDie()     { this.seq([{f:800,d:0.10,v:0.22},{f:1000,d:0.10,v:0.22},{f:1200,d:0.10,v:0.22},{f:1500,d:0.30,t:'triangle',v:0.26}]); },
@@ -106,11 +107,10 @@ const Sfx = {
 
 // ===== BGM =====
 const BGM_NORMAL = [
-  // 16 8th-notes; A minor groove
-  { b: 110, l: 440 }, { b: 0,   l: 0   }, { b: 0,   l: 523 }, { b: 0,   l: 0   },
-  { b: 110, l: 659 }, { b: 0,   l: 0   }, { b: 0,   l: 523 }, { b: 0,   l: 440 },
-  { b: 87.31, l: 523 }, { b: 0, l: 0   }, { b: 0,   l: 587 }, { b: 0,   l: 0   },
-  { b: 98,  l: 587 }, { b: 0,   l: 0   }, { b: 0,   l: 523 }, { b: 0,   l: 440 },
+  { b: 110, l: 440 }, { b: 0, l: 0 }, { b: 0, l: 523 }, { b: 0, l: 0 },
+  { b: 110, l: 659 }, { b: 0, l: 0 }, { b: 0, l: 523 }, { b: 0, l: 440 },
+  { b: 87.31, l: 523 }, { b: 0, l: 0 }, { b: 0, l: 587 }, { b: 0, l: 0 },
+  { b: 98, l: 587 }, { b: 0, l: 0 }, { b: 0, l: 523 }, { b: 0, l: 440 },
 ];
 const BGM_BOSS = [
   { b: 82.41, l: 392 }, { b: 0, l: 0 }, { b: 0, l: 466 }, { b: 0, l: 0 },
@@ -145,8 +145,7 @@ const Bgm = {
     while (this.scheduledUntil < lookahead) {
       const n = pattern[this.step % pattern.length];
       if (n.b) Sfx.toneAt(n.b, this.scheduledUntil, 0.18, 'triangle', 0.07);
-      if (n.l) Sfx.toneAt(n.l, this.scheduledUntil, 0.10, 'square',   0.04);
-      // simple drum: hi-hat noise on every step using high freq short tone
+      if (n.l) Sfx.toneAt(n.l, this.scheduledUntil, 0.10, 'square', 0.04);
       if (this.step % 2 === 0) Sfx.toneAt(160, this.scheduledUntil, 0.03, 'square', 0.02);
       this.scheduledUntil += stepDur;
       this.step++;
@@ -187,18 +186,55 @@ const GRAVITY = 2400;
 const JUMP_VEL = -780;
 const DBL_JUMP_VEL = -680;
 const BASE_SPEED = 320;
-const MAX_SPEED = 800;
+const MAX_SPEED = 600;        // softer cap
+const SPEED_RAMP = 3;          // gentle ramp (was 8)
 const INVULN_TIME = 1.2;
 const BASE_ATTACK_CD = 0.34;
 const PROJECTILE_SPEED = 800;
-const BOSS_INTERVAL = 1000;
+const CYCLE_LENGTH = 1000;     // one full day per 1000 score
+const BOSS_PHASE = 0.80;       // boss spawns at this fraction of cycle (= night)
 const COIN_VALUE_BASE = 1;
 const GACHA_COST = 100;
+
+// ===== Day / Night palette =====
+// Linear interpolation between keyframes.
+// Each frame: [phaseT, topRGB, midRGB, botRGB]
+const SKY_PALETTE = [
+  [0.00, [120, 60, 110], [240, 130, 110], [255, 200, 130]], // dawn
+  [0.18, [60, 100, 170], [120, 170, 220], [200, 230, 240]], // morning to day
+  [0.35, [40, 70, 150],  [80, 130, 200],  [170, 200, 230]], // bright day
+  [0.55, [50, 70, 140],  [110, 130, 200], [200, 180, 200]], // late day
+  [0.68, [80, 50, 130],  [200, 80, 100],  [255, 150, 90]],  // sunset
+  [0.78, [40, 30, 90],   [120, 50, 100],  [200, 90, 70]],   // dusk
+  [0.85, [10, 12, 38],   [22, 26, 70],    [50, 40, 110]],   // night
+  [1.00, [10, 12, 38],   [22, 26, 70],    [50, 40, 110]],   // night (held)
+];
+function lerp(a, b, t) { return a + (b - a) * t; }
+function lerpColor(c1, c2, t) {
+  return [lerp(c1[0], c2[0], t), lerp(c1[1], c2[1], t), lerp(c1[2], c2[2], t)];
+}
+function rgbStr(c) { return `rgb(${c[0]|0},${c[1]|0},${c[2]|0})`; }
+function getSky(t) {
+  for (let i = 0; i < SKY_PALETTE.length - 1; i++) {
+    const a = SKY_PALETTE[i], b = SKY_PALETTE[i + 1];
+    if (t >= a[0] && t <= b[0]) {
+      const lt = (b[0] === a[0]) ? 0 : (t - a[0]) / (b[0] - a[0]);
+      return { top: lerpColor(a[1], b[1], lt), mid: lerpColor(a[2], b[2], lt), bot: lerpColor(a[3], b[3], lt) };
+    }
+  }
+  const last = SKY_PALETTE[SKY_PALETTE.length - 1];
+  return { top: last[1], mid: last[2], bot: last[3] };
+}
+
+// stars seeded once
+const STARS = [];
+for (let i = 0; i < 70; i++) STARS.push({ x: Math.random(), y: Math.random() * 0.65, r: 0.5 + Math.random() * 1.6, seed: Math.random() * 1000 });
 
 // ===== State =====
 const state = {
   running: false, over: false,
   speed: BASE_SPEED, distance: 0, score: 0,
+  cycleStart: 0, bossSpawnedThisCycle: false,
   obstacles: [], coins: [], pickups: [],
   clouds: [], particles: [], allies: [],
   projectiles: [], enemyShots: [], floatTexts: [],
@@ -208,8 +244,8 @@ const state = {
   coinTimer: 0, coinNext: 1.0,
   pickupTimer: 12,
   attackCd: 0,
-  firePower: 1, // stack count, reduces cd & adds coin value? just CD reduction
-  boss: null, bossPending: false, nextBossScore: BOSS_INTERVAL,
+  firePower: 1,
+  boss: null, bossPending: false,
   spawnPaused: false, bossClear: 0,
   effects: null,
   healTimer: 0, bombTimer: 0, autogunTimer: 0,
@@ -218,11 +254,15 @@ const state = {
 const player = {
   x: 0, y: 0, vy: 0, w: 38, h: 46,
   onGround: true, jumps: 0, runFrame: 0, trail: [],
-  falling: false,
+  falling: false, dying: false,
 };
 
 bestEl.textContent = save.best;
 coinsEl.textContent = save.coins;
+
+function getCyclePhase() {
+  return Math.min(0.9999, Math.max(0, (state.score - state.cycleStart) / CYCLE_LENGTH));
+}
 
 function maxJumps() { return 2 + state.allies.length; }
 function getAttackCd() { return BASE_ATTACK_CD * (state.effects?.cdMul || 1) * Math.pow(0.85, state.firePower - 1); }
@@ -255,13 +295,15 @@ function applyCompanions() {
 function resetPlayer() {
   player.x = W * 0.22; player.y = groundY - player.h;
   player.vy = 0; player.onGround = true; player.jumps = 0;
-  player.runFrame = 0; player.trail = []; player.falling = false;
+  player.runFrame = 0; player.trail = [];
+  player.falling = false; player.dying = false;
 }
 
 function reset() {
   Sfx.init(); Sfx.resume();
   state.running = true; state.over = false;
   state.speed = BASE_SPEED; state.distance = 0; state.score = 0;
+  state.cycleStart = 0; state.bossSpawnedThisCycle = false;
   state.obstacles = []; state.coins = []; state.pickups = [];
   state.clouds = []; state.particles = []; state.allies = [];
   state.projectiles = []; state.enemyShots = []; state.floatTexts = [];
@@ -272,7 +314,7 @@ function reset() {
   state.pickupTimer = 12;
   state.attackCd = 0;
   state.firePower = 1;
-  state.boss = null; state.bossPending = false; state.nextBossScore = BOSS_INTERVAL;
+  state.boss = null; state.bossPending = false;
   state.spawnPaused = false; state.bossClear = 0;
   state.healTimer = 0; state.bombTimer = 6; state.autogunTimer = 0;
   resetPlayer();
@@ -299,7 +341,7 @@ function seedClouds() {
 
 // ===== Inputs =====
 function jump() {
-  if (!state.running) return;
+  if (!state.running || player.dying) return;
   if (player.jumps < maxJumps()) {
     player.vy = player.jumps === 0 ? JUMP_VEL : DBL_JUMP_VEL;
     player.onGround = false;
@@ -309,7 +351,7 @@ function jump() {
   }
 }
 function attack() {
-  if (!state.running) return;
+  if (!state.running || player.dying) return;
   if (state.attackCd > 0) return;
   state.attackCd = getAttackCd();
   state.projectiles.push({
@@ -349,24 +391,22 @@ function getDifficulty() { return Math.min(8, Math.floor(state.score / 250)); }
 function spawnObstacle() {
   state.obstacleCount++;
   const diff = getDifficulty();
-  // friend every 6th obstacle
   if (state.obstacleCount % 6 === 0) {
     state.obstacles.push({ kind: 'friend', x: W + 36, y: groundY - 32, w: 32, h: 32, bob: 0 });
     return;
   }
-  // build pool by difficulty
   const pool = [];
   pool.push({ kind: 'spike', w: 20 + Math.random() * 22 });
   pool.push({ kind: 'block', w: 32 + Math.random() * 18 });
   if (diff >= 1) pool.push({ kind: 'fireball', w: 0 });
   if (diff >= 2) pool.push({ kind: 'hole', w: 60 + Math.random() * 40 });
-  if (diff >= 3) { pool.push({ kind: 'spike', w: 30 }); pool.push({ kind: 'block', w: 40 }); } // increase hazards weight
+  if (diff >= 3) { pool.push({ kind: 'spike', w: 30 }); pool.push({ kind: 'block', w: 40 }); }
   const t = pool[Math.floor(Math.random() * pool.length)];
   if (t.kind === 'spike') {
     const h = 28 + Math.random() * 36;
     state.obstacles.push({ kind: 'spike', x: W + t.w, y: groundY - h, w: t.w, h });
   } else if (t.kind === 'block') {
-    const h = 90 + Math.random() * 50; // tall, requires shooting
+    const h = 90 + Math.random() * 50;
     state.obstacles.push({ kind: 'block', x: W + t.w, y: groundY - h, w: t.w, h, hp: 1 });
   } else if (t.kind === 'fireball') {
     const fy = groundY - 30 - Math.random() * 100;
@@ -408,7 +448,6 @@ function bossDefeated() {
   if (!state.boss) return;
   for (let i = 0; i < 3; i++) burst(state.boss.x + Math.random()*state.boss.w, state.boss.y + Math.random()*state.boss.h, '#ff5252', '#ffeb3b', 24);
   state.shake = 1.0;
-  // drop a burst of coins
   for (let i = 0; i < 12; i++) {
     state.coins.push({
       x: state.boss.x + state.boss.w/2 + (Math.random()-0.5)*40,
@@ -421,7 +460,9 @@ function bossDefeated() {
   Sfx.bossDie();
   state.boss = null;
   state.bossClear = 1.2;
-  state.nextBossScore = state.score + BOSS_INTERVAL;
+  // Move to next morning
+  state.cycleStart = state.score;
+  state.bossSpawnedThisCycle = false;
   state.enemyShots = [];
 }
 function updateBoss(dt) {
@@ -445,8 +486,7 @@ function updateBoss(dt) {
         const sp = 320 + Math.random()*80;
         const ang = Math.atan2(dy, dx) + (i - (count-1)/2) * 0.15;
         state.enemyShots.push({ x: b.x + b.w/2, y: b.y + b.h/2,
-          vx: Math.cos(ang)*sp, vy: Math.sin(ang)*sp,
-          r: 9, age: 0, life: 4 });
+          vx: Math.cos(ang)*sp, vy: Math.sin(ang)*sp, r: 9, age: 0, life: 4 });
       }
       b.shootCd = b.hp <= 3 ? 1.0 : (b.hp <= 6 ? 1.4 : 1.7);
     }
@@ -455,8 +495,7 @@ function updateBoss(dt) {
 
 // ===== Helpers =====
 function rectsOverlap(a, b) {
-  return a.x < b.x + b.w && a.x + a.w > b.x &&
-         a.y < b.y + b.h && a.y + a.h > b.y;
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 }
 function circRect(cx, cy, r, rect) {
   const nx = Math.max(rect.x, Math.min(cx, rect.x + rect.w));
@@ -490,14 +529,13 @@ function damagePlayer() {
 }
 
 function detonateBomb() {
-  // destroy up to 3 obstacles in front of player
   let destroyed = 0;
   burst(W * 0.6, groundY - 100, '#ff5252', '#ffeb3b', 30);
   state.shake = 0.6;
   Sfx.bomb();
   for (let i = state.obstacles.length - 1; i >= 0 && destroyed < 4; i--) {
     const o = state.obstacles[i];
-    if (o.kind === 'friend' || o.kind === 'hole') continue;
+    if (o.kind === 'friend' || o.kind === 'hole' || o.kind === 'fireball') continue;
     if (o.x > player.x + player.w && o.x < W) {
       burst(o.x + (o.w||20)/2, o.y + (o.h||20)/2, '#ff5252', '#ffeb3b', 12);
       state.obstacles.splice(i, 1);
@@ -510,15 +548,28 @@ function detonateBomb() {
 function update(dt) {
   if (!state.running) return;
 
-  if (!state.boss && !state.bossPending) state.speed = Math.min(MAX_SPEED, state.speed + 8 * dt);
+  // dying (falling off-screen): stop spawning, just gravity
+  if (player.dying) {
+    player.vy += GRAVITY * dt;
+    player.y += player.vy * dt;
+    if (player.y > H + 80) {
+      finalizeDeath('穴に落ちた！');
+    }
+    return;
+  }
+
+  if (!state.boss && !state.bossPending) state.speed = Math.min(MAX_SPEED, state.speed + SPEED_RAMP * dt);
   state.distance += state.speed * dt;
   state.score = Math.floor(state.distance / 10);
   scoreEl.textContent = state.score;
   state.bgScroll = (state.bgScroll + state.speed * dt * 0.5) % 1000;
 
-  // boss trigger
-  if (!state.boss && !state.bossPending && state.score >= state.nextBossScore) {
-    state.bossPending = true; state.spawnPaused = true;
+  // boss trigger via day cycle: night = boss
+  if (!state.boss && !state.bossPending && !state.bossSpawnedThisCycle) {
+    if (getCyclePhase() >= BOSS_PHASE) {
+      state.bossPending = true; state.spawnPaused = true;
+      state.bossSpawnedThisCycle = true;
+    }
   }
   if (state.bossPending && state.obstacles.length === 0) {
     state.bossClear -= dt;
@@ -531,12 +582,10 @@ function update(dt) {
 
   if (state.attackCd > 0) state.attackCd = Math.max(0, state.attackCd - dt);
 
-  // companion: autogun
   if (state.effects.autogun) {
     state.autogunTimer -= dt;
     if (state.autogunTimer <= 0) { attack(); state.autogunTimer = 0.55; }
   }
-  // companion: heal
   if (state.effects.healInterval > 0) {
     state.healTimer += dt;
     if (state.healTimer >= state.effects.healInterval && state.allies.length < 4) {
@@ -547,7 +596,6 @@ function update(dt) {
       Sfx.recruit();
     }
   }
-  // companion: bomber
   if (state.effects.bomber) {
     state.bombTimer -= dt;
     if (state.bombTimer <= 0) { detonateBomb(); state.bombTimer = 12; }
@@ -556,26 +604,39 @@ function update(dt) {
   // player physics
   player.vy += GRAVITY * dt;
   player.y += player.vy * dt;
-  // hole detection
   let overHole = false;
   for (const o of state.obstacles) {
     if (o.kind === 'hole' &&
         player.x + player.w * 0.7 > o.x + 4 &&
         player.x + player.w * 0.3 < o.x + o.w - 4) { overHole = true; break; }
   }
-  if (player.y + player.h >= groundY) {
-    if (overHole && state.invuln <= 0) {
-      // fall in
-      damagePlayer();
-      // reposition above ground
-      player.y = groundY - player.h;
-      player.vy = 0;
-      if (state.running) { player.onGround = true; player.jumps = 0; }
-    } else {
-      player.y = groundY - player.h;
-      player.vy = 0;
-      if (!player.onGround) { player.onGround = true; player.jumps = 0; }
+  if (overHole) {
+    // No ground beneath - keep falling. If we cross the ground line, mark falling.
+    if (player.y + player.h >= groundY) {
+      if (!player.falling) {
+        player.falling = true;
+        Sfx.fall();
+      }
+      player.onGround = false;
+      // do NOT clamp to ground - let player fall through
     }
+  } else if (player.y + player.h >= groundY) {
+    if (player.falling) {
+      // landed safely (jumped out of hole)
+      player.falling = false;
+    }
+    player.y = groundY - player.h;
+    player.vy = 0;
+    if (!player.onGround) { player.onGround = true; player.jumps = 0; }
+  }
+  // off-screen = death (clears all allies)
+  if (player.y > H + 60 && !player.dying) {
+    state.allies = [];
+    alliesEl.textContent = 0;
+    player.dying = true;
+    state.shake = 0.4;
+    Sfx.fall();
+    return;
   }
   player.runFrame += dt * 12;
 
@@ -598,14 +659,12 @@ function update(dt) {
       const sf = state.speed / BASE_SPEED;
       state.spawnNext = (0.85 + Math.random() * 0.9) / Math.max(1, sf * 0.75);
     }
-    // spawn coins
     state.coinTimer += dt;
     if (state.coinTimer >= state.coinNext) {
       if (Math.random() < state.effects.coinSpawnMul) spawnCoinGroup();
       state.coinTimer = 0;
       state.coinNext = 0.6 + Math.random() * 1.0;
     }
-    // spawn fire-rate pickup
     state.pickupTimer -= dt;
     if (state.pickupTimer <= 0) {
       spawnPickup();
@@ -621,7 +680,7 @@ function update(dt) {
   }
   state.obstacles = state.obstacles.filter(o => o.x + (o.w||30) > -30);
 
-  // move coins (some have initial velocity from boss drop)
+  // coins
   for (const c of state.coins) {
     if (c.vx !== undefined) {
       c.vx += 60 * dt; if (c.vx > -state.speed) c.vx = -state.speed;
@@ -632,7 +691,6 @@ function update(dt) {
       c.x -= state.speed * dt;
     }
     c.bob += dt * 4;
-    // magnet
     if (state.effects.magnet > 0) {
       const dx = (player.x + player.w/2) - c.x, dy = (player.y + player.h/2) - c.y;
       const d = Math.hypot(dx, dy);
@@ -644,7 +702,7 @@ function update(dt) {
   }
   state.coins = state.coins.filter(c => !c.collected && c.x + c.r > -10);
 
-  // move pickups
+  // pickups
   for (const p of state.pickups) { p.x -= state.speed * dt; p.bob = (p.bob||0) + dt * 4; }
   state.pickups = state.pickups.filter(p => p.x + p.w > -10);
 
@@ -652,7 +710,6 @@ function update(dt) {
   for (const p of state.projectiles) { p.age += dt; p.x += p.vx * dt; p.y += p.vy * dt; }
   state.projectiles = state.projectiles.filter(p => p.age < p.life && p.x < W + 30);
 
-  // projectile vs boss/obstacles
   for (let pi = state.projectiles.length - 1; pi >= 0; pi--) {
     const p = state.projectiles[pi]; let hit = false;
     if (state.boss && circRect(p.x, p.y, p.r, state.boss)) {
@@ -664,18 +721,15 @@ function update(dt) {
     } else {
       for (let oi = state.obstacles.length - 1; oi >= 0; oi--) {
         const o = state.obstacles[oi];
-        if (o.kind === 'spike' || o.kind === 'friend' || o.kind === 'hole') continue;
+        // Spike, friend, hole, fireball: not destructible by projectile
+        if (o.kind === 'spike' || o.kind === 'friend' || o.kind === 'hole' || o.kind === 'fireball') continue;
         if (circRect(p.x, p.y, p.r, o)) {
-          if (o.kind === 'fireball') {
-            burst(p.x, p.y, '#ff8a65', '#ffeb3b', 14);
-            state.obstacles.splice(oi, 1);
-            state.distance += 20;
-          } else if (o.kind === 'block') {
+          if (o.kind === 'block') {
             o.hp = (o.hp || 1) - 1;
             burst(p.x, p.y, '#fff', '#7e57c2', 8);
             if (o.hp <= 0) { state.obstacles.splice(oi, 1); state.distance += 30; }
+            hit = true; break;
           }
-          hit = true; break;
         }
       }
     }
@@ -693,10 +747,8 @@ function update(dt) {
     c.x -= c.speed * dt;
     if (c.x + c.r < 0) { c.x = W + c.r; c.y = 30 + Math.random()*(groundY*0.55); c.r = 18 + Math.random()*28; }
   }
-  // particles
   for (const p of state.particles) { p.age += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 400 * dt; }
   state.particles = state.particles.filter(p => p.age < p.life);
-  // floats
   for (const t of state.floatTexts) { t.age += dt; t.y += t.vy * dt; t.vy += 60 * dt; }
   state.floatTexts = state.floatTexts.filter(t => t.age < t.life);
 
@@ -725,7 +777,6 @@ function update(dt) {
       } else { gameOver(); break; }
     }
   }
-  // enemy shots
   if (state.invuln <= 0) {
     for (let i = state.enemyShots.length - 1; i >= 0; i--) {
       const e = state.enemyShots[i];
@@ -736,10 +787,8 @@ function update(dt) {
       }
     }
   }
-  // boss body
   if (state.boss && state.invuln <= 0 && rectsOverlap(pBox, state.boss)) damagePlayer();
 
-  // coin collection
   for (let i = state.coins.length - 1; i >= 0; i--) {
     const c = state.coins[i];
     const dx = (player.x + player.w/2) - c.x, dy = (player.y + player.h/2) - c.y;
@@ -752,7 +801,6 @@ function update(dt) {
       if (i % 4 === 0) burst(c.x, c.y, '#ffeb3b', '#fff59d', 6);
     }
   }
-  // pickups
   for (let i = state.pickups.length - 1; i >= 0; i--) {
     const p = state.pickups[i];
     if (rectsOverlap({ x: p.x, y: p.y, w: p.w, h: p.h }, pBox)) {
@@ -768,10 +816,12 @@ function update(dt) {
   }
 }
 
-function gameOver() {
+function gameOver() { finalizeDeath('もう一度挑戦しよう！'); }
+function finalizeDeath(msg) {
+  if (state.over) return;
   state.running = false; state.over = true;
   state.shake = 1;
-  burst(player.x + player.w/2, player.y + player.h/2);
+  if (!player.dying) burst(player.x + player.w/2, player.y + player.h/2);
   Sfx.hit();
   Bgm.stop();
   if (state.score > save.best) save.best = state.score;
@@ -779,7 +829,7 @@ function gameOver() {
   bestEl.textContent = save.best;
   setTimeout(() => {
     titleEl.textContent = 'GAME OVER';
-    descEl.innerHTML = 'もう一度挑戦しよう！';
+    descEl.textContent = msg;
     lastScoreEl.textContent = `SCORE  ${state.score}    BEST  ${save.best}    🪙${save.coins}`;
     startBtn.textContent = 'RETRY';
     overlay.classList.remove('hidden');
@@ -797,6 +847,69 @@ function roundRect(x, y, w, h, r, fill) {
   ctx.closePath();
   if (fill) ctx.fill();
 }
+
+function drawSky() {
+  const t = state.running ? getCyclePhase() : 0.3;
+  const sky = getSky(t);
+  const grd = ctx.createLinearGradient(0, 0, 0, groundY);
+  grd.addColorStop(0, rgbStr(sky.top));
+  grd.addColorStop(0.6, rgbStr(sky.mid));
+  grd.addColorStop(1, rgbStr(sky.bot));
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, 0, W, groundY);
+
+  // Stars (visible during dusk -> night)
+  if (t > 0.72) {
+    const a = Math.min(1, (t - 0.72) / 0.10);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = '#fff';
+    const tNow = performance.now() * 0.001;
+    for (const s of STARS) {
+      const tw = (Math.sin(tNow + s.seed) + 1) * 0.5;
+      ctx.beginPath();
+      ctx.arc(s.x * W, s.y * groundY, s.r * (0.4 + tw * 0.6), 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+  // Sun (rises and sets across day)
+  if (t < 0.72) {
+    const sunT = Math.max(0, Math.min(1, (t - 0.02) / 0.7));
+    const sx = sunT * W;
+    const sy = groundY * 0.75 - Math.sin(sunT * Math.PI) * groundY * 0.55;
+    const a = (t < 0.06 ? (t - 0.02) / 0.04 : t > 0.66 ? Math.max(0, (0.72 - t) / 0.06) : 1);
+    const isSetting = t > 0.55;
+    const sunColor = isSetting ? '#ff7043' : (t < 0.18 ? '#ffb74d' : '#fff59d');
+    ctx.globalAlpha = Math.max(0, a);
+    const grd2 = ctx.createRadialGradient(sx, sy, 8, sx, sy, 90);
+    grd2.addColorStop(0, sunColor);
+    grd2.addColorStop(1, 'rgba(255,200,100,0)');
+    ctx.fillStyle = grd2;
+    ctx.fillRect(sx - 90, sy - 90, 180, 180);
+    ctx.fillStyle = sunColor;
+    ctx.beginPath(); ctx.arc(sx, sy, 22, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  // Moon at night
+  if (t > 0.78) {
+    const a = Math.min(1, (t - 0.78) / 0.05);
+    ctx.globalAlpha = a;
+    const mx = W * 0.82, my = groundY * 0.22;
+    const grd3 = ctx.createRadialGradient(mx, my, 8, mx, my, 60);
+    grd3.addColorStop(0, 'rgba(255,255,230,0.5)');
+    grd3.addColorStop(1, 'rgba(255,255,230,0)');
+    ctx.fillStyle = grd3;
+    ctx.fillRect(mx - 60, my - 60, 120, 120);
+    ctx.fillStyle = '#f5f5dc';
+    ctx.beginPath(); ctx.arc(mx, my, 26, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,0.10)';
+    ctx.beginPath(); ctx.arc(mx - 8, my - 4, 4, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(mx + 6, my + 8, 6, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(mx - 4, my + 10, 3, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
 function drawGround() {
   ctx.fillStyle = '#1c2440';
   ctx.fillRect(0, groundY, W, H - groundY);
@@ -806,12 +919,10 @@ function drawGround() {
   const sw = 30;
   const off = -((state.distance) % (sw * 2));
   for (let x = off; x < W; x += sw * 2) ctx.fillRect(x, groundY + 6, sw, 4);
-  // cut holes
   for (const o of state.obstacles) {
     if (o.kind !== 'hole') continue;
-    ctx.fillStyle = '#0b1020';
+    ctx.fillStyle = '#0a0d1d';
     ctx.fillRect(o.x, groundY - 2, o.w, H - groundY + 4);
-    // edges
     const grad = ctx.createLinearGradient(o.x, groundY, o.x, groundY + 60);
     grad.addColorStop(0, 'rgba(0,0,0,0.7)');
     grad.addColorStop(1, 'rgba(0,0,0,0)');
@@ -820,8 +931,11 @@ function drawGround() {
     ctx.fillRect(o.x + o.w - 7, groundY, 5, 50);
   }
 }
+
 function drawClouds() {
-  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  const t = state.running ? getCyclePhase() : 0.3;
+  const ca = t > 0.78 ? Math.max(0.05, 0.18 - (t - 0.78) * 1.3) : 0.18;
+  ctx.fillStyle = `rgba(255,255,255,${ca})`;
   for (const c of state.clouds) {
     ctx.beginPath();
     ctx.arc(c.x, c.y, c.r, 0, Math.PI*2);
@@ -830,6 +944,7 @@ function drawClouds() {
     ctx.fill();
   }
 }
+
 function drawAllies() {
   for (let i = 0; i < state.allies.length; i++) {
     const a = state.allies[i];
@@ -844,37 +959,148 @@ function drawAllies() {
     ctx.beginPath(); ctx.arc(a.x + 2, a.y + 2 + bob, 3, 0, Math.PI); ctx.stroke();
   }
 }
+
+// ===== Mini Dragon Player =====
 function drawPlayer() {
   const px = player.x, py = player.y, w = player.w, h = player.h;
-  const ss = player.onGround ? 1 : Math.max(0.4, 1 - (groundY - (py + h)) / 200);
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
-  ctx.beginPath(); ctx.ellipse(px + w/2, groundY + 4, (w/2)*ss, 5*ss, 0, 0, Math.PI*2); ctx.fill();
+  const ss = (player.onGround && !player.falling) ? 1 : Math.max(0.3, 1 - (groundY - (py + h)) / 200);
+  if (!player.falling || player.y < groundY) {
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(px + w/2, groundY + 4, (w/2)*ss, 5*ss, 0, 0, Math.PI*2); ctx.fill();
+  }
   const blink = state.invuln > 0 ? (Math.floor(state.invuln*18) % 2 === 0 ? 0.4 : 1) : 1;
   ctx.globalAlpha = blink;
-  ctx.fillStyle = '#ffd54f';
-  roundRect(px + 4, py + 6, w - 8, h - 10, 6, true);
-  ctx.fillStyle = '#fff3c4';
-  ctx.beginPath(); ctx.arc(px + w/2, py + 8, 9, 0, Math.PI*2); ctx.fill();
+
+  const cx = px + w/2, cy = py + h/2;
+  const rf = player.runFrame;
+
+  // Tail (curled, wagging)
+  const tailWag = Math.sin(rf * 0.7) * 4;
+  ctx.fillStyle = '#2e7d32';
+  ctx.beginPath();
+  ctx.ellipse(px - 2, py + h * 0.62 + tailWag, 9, 6, -0.4, 0, Math.PI*2);
+  ctx.fill();
+  // Tail tip (spade)
+  ctx.beginPath();
+  ctx.moveTo(px - 9, py + h * 0.55 + tailWag);
+  ctx.lineTo(px - 16, py + h * 0.5 + tailWag);
+  ctx.lineTo(px - 12, py + h * 0.62 + tailWag);
+  ctx.lineTo(px - 16, py + h * 0.74 + tailWag);
+  ctx.lineTo(px - 9, py + h * 0.7 + tailWag);
+  ctx.closePath();
+  ctx.fill();
+
+  // Wing (animated)
+  const flap = (player.onGround && !player.falling) ? Math.sin(rf * 1.4) * 5 : Math.sin(rf * 6) * 8;
+  ctx.fillStyle = '#66bb6a';
+  ctx.beginPath();
+  ctx.moveTo(cx - 5, py + h * 0.38);
+  ctx.quadraticCurveTo(cx - 14, py + h * 0.22 - flap, cx + 2, py + h * 0.18 - flap*0.3);
+  ctx.quadraticCurveTo(cx - 2, py + h * 0.32, cx - 5, py + h * 0.5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  ctx.beginPath();
+  ctx.moveTo(cx - 5, py + h * 0.38);
+  ctx.quadraticCurveTo(cx - 12, py + h * 0.25 - flap, cx + 2, py + h * 0.2 - flap*0.3);
+  ctx.lineTo(cx - 5, py + h * 0.45);
+  ctx.closePath();
+  ctx.fill();
+
+  // Body
+  ctx.fillStyle = '#43a047';
+  ctx.beginPath();
+  ctx.ellipse(cx + 1, py + h * 0.58, w/2 - 5, h/2 - 6, 0, 0, Math.PI*2);
+  ctx.fill();
+  // Belly
+  ctx.fillStyle = '#dcedc8';
+  ctx.beginPath();
+  ctx.ellipse(cx + 2, py + h * 0.7, w/2 - 11, h/2 - 13, 0, 0, Math.PI*2);
+  ctx.fill();
+  // Belly stripes
+  ctx.fillStyle = 'rgba(141,110,99,0.3)';
+  for (let i = 0; i < 3; i++) {
+    ctx.fillRect(cx - 6, py + h * 0.6 + i * 5, 12, 1);
+  }
+
+  // Head
+  const headX = px + w * 0.78, headY = py + h * 0.32;
+  ctx.fillStyle = '#43a047';
+  ctx.beginPath();
+  ctx.arc(headX, headY, 11, 0, Math.PI*2);
+  ctx.fill();
+  // Snout
+  ctx.beginPath();
+  ctx.ellipse(headX + 6, headY + 3, 8, 6, 0.1, 0, Math.PI*2);
+  ctx.fill();
+  // Nostril
   ctx.fillStyle = '#1a1a2e';
-  ctx.beginPath(); ctx.arc(px + w/2 + 3, py + 7, 2, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#ff7043';
-  const ls = player.onGround ? Math.sin(player.runFrame)*6 : -4;
-  roundRect(px + 8, py + h - 6, 8, 6 + Math.max(0, ls), 2, true);
-  roundRect(px + w - 16, py + h - 6, 8, 6 + Math.max(0, -ls), 2, true);
-  ctx.fillStyle = '#ffb74d';
-  const as = player.onGround ? Math.sin(player.runFrame + Math.PI)*4 : 6;
-  roundRect(px + w - 8, py + 14 + as, 6, 12, 2, true);
-  if (state.attackCd <= 0 && state.running) {
-    ctx.fillStyle = 'rgba(255,255,150,0.9)';
-    ctx.beginPath(); ctx.arc(px + w + 4, py + h*0.5, 2 + state.firePower*0.6, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath();
+  ctx.arc(headX + 11, headY + 1, 1, 0, Math.PI*2);
+  ctx.fill();
+  // Mouth
+  ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(headX + 4, headY + 6);
+  ctx.lineTo(headX + 13, headY + 7);
+  ctx.stroke();
+
+  // Horns (two)
+  ctx.fillStyle = '#fff8e1';
+  ctx.beginPath();
+  ctx.moveTo(headX - 5, headY - 6);
+  ctx.lineTo(headX - 8, headY - 14);
+  ctx.lineTo(headX - 1, headY - 8);
+  ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(headX + 2, headY - 8);
+  ctx.lineTo(headX + 1, headY - 16);
+  ctx.lineTo(headX + 6, headY - 9);
+  ctx.closePath(); ctx.fill();
+
+  // Eye
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(headX + 2, headY - 1, 3.2, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#1a1a2e';
+  ctx.beginPath(); ctx.arc(headX + 3, headY - 1, 1.8, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(headX + 3.5, headY - 1.5, 0.6, 0, Math.PI*2); ctx.fill();
+
+  // Spikes on back (small triangles)
+  ctx.fillStyle = '#dcedc8';
+  for (let i = 0; i < 3; i++) {
+    const sx = cx - 5 + i * 5;
+    ctx.beginPath();
+    ctx.moveTo(sx - 2, py + h * 0.42);
+    ctx.lineTo(sx, py + h * 0.36);
+    ctx.lineTo(sx + 2, py + h * 0.42);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Legs
+  ctx.fillStyle = '#2e7d32';
+  const ls = (player.onGround && !player.falling) ? Math.sin(rf) * 6 : -3;
+  const rs = (player.onGround && !player.falling) ? Math.sin(rf + Math.PI) * 6 : -3;
+  roundRect(px + w * 0.32, py + h - 7, 7, 7 + Math.max(0, ls), 2, true);
+  roundRect(px + w * 0.55, py + h - 7, 7, 7 + Math.max(0, rs), 2, true);
+  // Tiny claws
+  ctx.fillStyle = '#fff8e1';
+  ctx.fillRect(px + w * 0.32, py + h - 1 + Math.max(0, ls), 7, 1);
+  ctx.fillRect(px + w * 0.55, py + h - 1 + Math.max(0, rs), 7, 1);
+
+  // Attack glow / breath ready
+  if (state.attackCd <= 0 && state.running && !player.dying) {
+    ctx.fillStyle = 'rgba(255,150,50,0.9)';
+    ctx.beginPath(); ctx.arc(headX + 14, headY + 4, 2 + state.firePower * 0.6, 0, Math.PI*2); ctx.fill();
   }
   ctx.globalAlpha = 1;
 }
+
 function drawObstacles() {
   for (const o of state.obstacles) {
     if (o.kind === 'spike') {
       ctx.fillStyle = '#ef5350';
-      // multi-spike row for unbreakable look
       const segs = Math.max(1, Math.floor(o.w / 12));
       for (let i = 0; i < segs; i++) {
         const sx = o.x + i * (o.w / segs);
@@ -889,41 +1115,35 @@ function drawObstacles() {
     } else if (o.kind === 'block') {
       ctx.fillStyle = '#7e57c2';
       roundRect(o.x, o.y, o.w, o.h, 5, true);
-      // brick lines
       ctx.fillStyle = 'rgba(0,0,0,0.25)';
       for (let y = o.y + 12; y < o.y + o.h; y += 14) ctx.fillRect(o.x, y, o.w, 1);
       ctx.fillStyle = 'rgba(255,255,255,0.18)';
       ctx.fillRect(o.x + 4, o.y + 4, o.w - 8, 3);
-      // crosshair to indicate "shoot me"
-      ctx.strokeStyle = '#fff59d';
-      ctx.lineWidth = 1.5;
-      const cx = o.x + o.w/2, cy = o.y + o.h/2;
-      ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI*2); ctx.stroke();
+      ctx.strokeStyle = '#fff59d'; ctx.lineWidth = 1.5;
+      const mcx = o.x + o.w/2, mcy = o.y + o.h/2;
+      ctx.beginPath(); ctx.arc(mcx, mcy, 6, 0, Math.PI*2); ctx.stroke();
       ctx.beginPath();
-      ctx.moveTo(cx - 10, cy); ctx.lineTo(cx - 4, cy);
-      ctx.moveTo(cx + 4, cy); ctx.lineTo(cx + 10, cy);
-      ctx.moveTo(cx, cy - 10); ctx.lineTo(cx, cy - 4);
-      ctx.moveTo(cx, cy + 4); ctx.lineTo(cx, cy + 10);
+      ctx.moveTo(mcx - 10, mcy); ctx.lineTo(mcx - 4, mcy);
+      ctx.moveTo(mcx + 4, mcy); ctx.lineTo(mcx + 10, mcy);
+      ctx.moveTo(mcx, mcy - 10); ctx.lineTo(mcx, mcy - 4);
+      ctx.moveTo(mcx, mcy + 4); ctx.lineTo(mcx, mcy + 10);
       ctx.stroke();
     } else if (o.kind === 'fireball') {
-      const cx = o.x + o.w/2, cy = o.y + o.h/2;
-      // outer glow
-      const gd = ctx.createRadialGradient(cx, cy, 4, cx, cy, o.w);
+      const cxF = o.x + o.w/2, cyF = o.y + o.h/2;
+      const gd = ctx.createRadialGradient(cxF, cyF, 4, cxF, cyF, o.w);
       gd.addColorStop(0, 'rgba(255,235,59,0.9)');
       gd.addColorStop(0.5, 'rgba(255,138,101,0.6)');
       gd.addColorStop(1, 'rgba(255,82,82,0)');
       ctx.fillStyle = gd;
-      ctx.fillRect(cx - o.w, cy - o.w, o.w*2, o.w*2);
-      // core
+      ctx.fillRect(cxF - o.w, cyF - o.w, o.w*2, o.w*2);
       ctx.fillStyle = '#ff8a65';
-      ctx.beginPath(); ctx.arc(cx, cy, o.w*0.5, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cxF, cyF, o.w*0.5, 0, Math.PI*2); ctx.fill();
       ctx.fillStyle = '#fff59d';
-      ctx.beginPath(); ctx.arc(cx + Math.cos(o.spin)*3, cy + Math.sin(o.spin)*3, o.w*0.25, 0, Math.PI*2); ctx.fill();
-      // trail
+      ctx.beginPath(); ctx.arc(cxF + Math.cos(o.spin)*3, cyF + Math.sin(o.spin)*3, o.w*0.25, 0, Math.PI*2); ctx.fill();
       ctx.fillStyle = 'rgba(255,138,101,0.4)';
       for (let i = 1; i < 5; i++) {
         ctx.beginPath();
-        ctx.arc(cx + i * 6, cy + Math.sin(o.spin + i)*3, o.w*0.4 - i*2, 0, Math.PI*2);
+        ctx.arc(cxF + i * 6, cyF + Math.sin(o.spin + i)*3, o.w*0.4 - i*2, 0, Math.PI*2);
         ctx.fill();
       }
     } else if (o.kind === 'friend') {
@@ -974,7 +1194,6 @@ function drawPickups() {
     ctx.fillStyle = gd;
     ctx.fillRect(cx - p.w, cy - p.w, p.w*2, p.w*2);
     ctx.fillStyle = '#00e5ff';
-    // lightning bolt shape
     ctx.beginPath();
     ctx.moveTo(cx - 4, cy - 10);
     ctx.lineTo(cx + 4, cy - 2);
@@ -1030,10 +1249,10 @@ function drawBoss() {
   ctx.fillStyle = '#fff';
   ctx.beginPath(); ctx.arc(ecx, ecy, 16, 0, Math.PI*2); ctx.fill();
   ctx.fillStyle = '#1a1a2e';
-  const px = ecx + Math.cos(b.eyeAngle)*6, py = ecy + Math.sin(b.eyeAngle)*6;
-  ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI*2); ctx.fill();
+  const px2 = ecx + Math.cos(b.eyeAngle)*6, py2 = ecy + Math.sin(b.eyeAngle)*6;
+  ctx.beginPath(); ctx.arc(px2, py2, 7, 0, Math.PI*2); ctx.fill();
   ctx.fillStyle = '#ff5252';
-  ctx.beginPath(); ctx.arc(px - 2, py - 2, 2, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(px2 - 2, py2 - 2, 2, 0, Math.PI*2); ctx.fill();
   ctx.fillStyle = '#1a1a2e';
   roundRect(b.x + b.w*0.25, b.y + b.h*0.72, b.w*0.5, 8, 3, true);
   const hpW = b.w + 16, hpH = 8, hpX = b.x - 8, hpY = b.y - 22;
@@ -1072,6 +1291,7 @@ function render() {
     sx = (Math.random() - 0.5) * 12 * state.shake;
     sy = (Math.random() - 0.5) * 12 * state.shake;
   }
+  drawSky();
   ctx.save();
   ctx.translate(sx, sy);
   drawClouds();
