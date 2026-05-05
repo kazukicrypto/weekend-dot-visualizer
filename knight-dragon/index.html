@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>騎士ドラ風 戦闘プロトタイプ</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <canvas id="game" width="800" height="500"></canvas>
+
+    <div id="hud">
+      <div id="weapons">
+        <button class="weapon" data-weapon="sword">
+          <span class="key">1</span>
+          <span class="icon">⚔</span>
+          <span class="label">剣</span>
+          <span class="cost">AP1</span>
+        </button>
+        <button class="weapon" data-weapon="spear">
+          <span class="key">2</span>
+          <span class="icon">🔱</span>
+          <span class="label">槍</span>
+          <span class="cost">AP1</span>
+        </button>
+        <button class="weapon" data-weapon="hammer">
+          <span class="key">3</span>
+          <span class="icon">🔨</span>
+          <span class="label">ハンマー</span>
+          <span class="cost">AP1</span>
+        </button>
+        <button id="shield">
+          <span class="key">SPACE</span>
+          <span class="icon">🛡</span>
+          <span class="label">ガード</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="overlay" class="hidden">
+      <div class="overlay-inner">
+        <h1 id="overlay-title">VICTORY</h1>
+        <p id="overlay-text">敵を倒した！</p>
+        <button id="restart">もう一度</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
