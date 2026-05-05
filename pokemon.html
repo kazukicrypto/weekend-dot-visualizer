@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1a1a2e">
+<title>モンファイト</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html, body {
+  width:100%; height:100%; overflow:hidden; background:#1a1a2e; color:#fff;
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+  user-select:none; -webkit-user-select:none; touch-action:manipulation;
+}
+#wrap { position:relative; width:100%; height:100%; display:flex; flex-direction:column; }
+#hud {
+  padding:6px 10px; display:flex; gap:6px; flex-wrap:wrap;
+  font-size:12px; background:#0f0f1f; border-bottom:1px solid #333;
+  font-weight:700;
+}
+#hud .pill { background:#222a40; padding:3px 8px; border-radius:6px; }
+#stage { flex:1; position:relative; min-height:0; background:#000; overflow:hidden; }
+canvas {
+  display:block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  width:100%; height:100%;
+}
+#controls {
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:6px;
+  padding:8px;
+  background:#0f0f1f;
+  border-top:1px solid #333;
+}
+#dpad {
+  display:grid;
+  grid-template-areas:". u ." "l c r" ". d .";
+  grid-template-columns: 48px 48px 48px;
+  grid-template-rows: 48px 48px 48px;
+  gap: 3px;
+  margin: 0 auto;
+}
+.dbtn {
+  background:#3a3f5c; border:1px solid #555; color:#fff;
+  font-size:18px; border-radius:6px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+}
+.dbtn:active { background:#5e6a8a; }
+#du { grid-area:u; } #dd { grid-area:d; } #dl { grid-area:l; } #dr { grid-area:r; }
+#dc { grid-area:c; visibility:hidden; }
+#actions { display:flex; flex-direction:column; gap:6px; padding:6px; justify-content:center; }
+.actBtn {
+  background:linear-gradient(135deg,#7e57c2,#5e35b1); border:none; color:#fff;
+  padding:14px; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer;
+}
+.actBtn:active { transform:scale(0.96); }
+.actBtn.b { background:linear-gradient(135deg,#ff8a65,#f4511e); }
+
+#textbox, #battleMenu {
+  position:absolute; bottom:0; left:0; right:0;
+  background:rgba(10,12,28,0.96); border-top:3px double #fff;
+  padding:10px 14px;
+  z-index:5; display:none;
+}
+#textbox.active, #battleMenu.active { display:block; }
+#textContent { font-size:14px; line-height:1.6; min-height:48px; }
+.next { position:absolute; bottom:4px; right:10px; font-size:11px; opacity:0.7; animation: blink 1s infinite; }
+@keyframes blink { 50% { opacity:0.2; } }
+
+#battleMenu .menu { display:grid; grid-template-columns: 1fr 1fr; gap:5px; }
+.menuBtn {
+  background:#1d2240; border:1px solid #555; color:#fff;
+  padding:9px 8px; border-radius:6px; font-size:12px; font-weight:700;
+  text-align:left; cursor:pointer;
+}
+.menuBtn:active { background:#3a3f5c; }
+.menuBtn:disabled { opacity:0.35; cursor:not-allowed; }
+.tag { font-size:9px; padding:1px 5px; border-radius:4px; margin-left:4px; vertical-align:middle; }
+
+#overlay, #partyModal {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background:rgba(10,12,28,0.95); z-index:20; padding:18px; text-align:center;
+  overflow-y:auto;
+}
+.hidden { display:none !important; }
+#overlay h1 { font-size:36px; margin-bottom:10px; color:#ffeb3b; letter-spacing:0.06em; }
+#overlay p, #partyModal p { font-size:13px; line-height:1.7; margin-bottom:14px; max-width:520px; opacity:0.9; }
+.bigBtn {
+  background:linear-gradient(135deg,#ffb74d,#ff7043); border:none; color:#fff;
+  padding:13px 36px; border-radius:999px; font-size:16px; font-weight:700;
+  cursor:pointer; box-shadow:0 6px 16px rgba(255,112,67,0.35);
+}
+.bigBtn:active { transform:scale(0.96); }
+.ghost { background:rgba(255,255,255,0.08); box-shadow:none; }
+
+.partyGrid { display:grid; grid-template-columns: repeat(2,1fr); gap:8px; width:100%; max-width:480px; margin:8px 0; }
+.partyCard {
+  background:#1d2240; border:1px solid #555; border-radius:8px; padding:8px;
+  display:flex; gap:8px; align-items:center; cursor:pointer;
+}
+.partyCard.active { border-color:#ffeb3b; box-shadow:0 0 8px rgba(255,235,59,0.4); }
+.partyCard.fainted { opacity:0.5; }
+.partyCard canvas { width:48px; height:48px; image-rendering:pixelated; flex-shrink:0; }
+.partyInfo { font-size:11px; flex:1; text-align:left; }
+.partyInfo .nm { font-weight:700; font-size:13px; }
+.hpbar { background:#000; border:1px solid #555; height:6px; border-radius:3px; overflow:hidden; margin-top:3px; }
+.hpfill { background:#66bb6a; height:100%; transition:width 0.3s ease; }
+.hpfill.low { background:#ffb300; }
+.hpfill.crit { background:#ef5350; }
+
+.tag.normal{background:#a8a878;color:#000;} .tag.fire{background:#f08030;}
+.tag.water{background:#6890f0;} .tag.grass{background:#78c850;}
+.tag.electric{background:#f8d030;color:#000;} .tag.ice{background:#98d8d8;color:#000;}
+.tag.rock{background:#b8a038;} .tag.ghost{background:#705898;}
+.tag.flying{background:#a890f0;} .tag.poison{background:#a040a0;}
+.tag.dragon{background:#7038f8;} .tag.fighting{background:#c03028;}
+.tag.legendary{background:linear-gradient(90deg,#ff5252,#ffeb3b,#69f0ae,#40c4ff,#e040fb);}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="hud">
+    <div class="pill">パーティ <span id="partyCnt">0</span>/6</div>
+    <div class="pill">$<span id="money">0</span></div>
+    <div class="pill">🏅<span id="badges">0</span></div>
+    <div class="pill">ボール🔴<span id="balls">5</span></div>
+    <div class="pill">薬💊<span id="potions">3</span></div>
+  </div>
+  <div id="stage">
+    <canvas id="game"></canvas>
+    <div id="textbox"><div id="textContent"></div><div class="next">▼ A</div></div>
+    <div id="battleMenu"><div id="battleContent" class="menu"></div></div>
+  </div>
+  <div id="controls">
+    <div id="dpad">
+      <button class="dbtn" id="du">▲</button>
+      <button class="dbtn" id="dd">▼</button>
+      <button class="dbtn" id="dl">◀</button>
+      <button class="dbtn" id="dr">▶</button>
+      <button class="dbtn" id="dc"></button>
+    </div>
+    <div id="actions">
+      <button class="actBtn" id="actA">A 決定/調べる</button>
+      <button class="actBtn b" id="actB">B メニュー</button>
+    </div>
+  </div>
+  <div id="overlay">
+    <h1>モンファイト</h1>
+    <p>
+      ドット風モンスターバトルRPG。<br>
+      草むらでモンスターと戦って捕まえよう。<br>
+      ジムリーダーを倒すと伝説モンスターが出現！<br><br>
+      操作: ▲▼◀▶=移動 / A=決定/調べる / B=メニュー（パーティ確認）
+    </p>
+    <button class="bigBtn" id="startBtn">START</button>
+    <button class="bigBtn ghost" id="continueBtn">CONTINUE</button>
+    <p style="opacity:0.6;font-size:11px;margin-top:14px;">
+      ← <a href="index.html" style="color:#80deea;">Tap Runnerに戻る</a>
+    </p>
+  </div>
+  <div id="partyModal" class="hidden">
+    <h2 style="font-size:24px;margin-bottom:8px;">パーティ</h2>
+    <div class="partyGrid" id="partyGrid"></div>
+    <button class="bigBtn ghost" id="closeParty">CLOSE</button>
+  </div>
+</div>
+<script src="pokemon-data.js"></script>
+<script src="pokemon.js"></script>
+</body>
+</html>
