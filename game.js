@@ -97,6 +97,7 @@ const Sfx = {
   bossDie()     { this.seq([{f:800,d:0.10,v:0.22},{f:1000,d:0.10,v:0.22},{f:1200,d:0.10,v:0.22},{f:1500,d:0.30,t:'triangle',v:0.26}]); },
   bossAlert()   { this.seq([{f:220,d:0.12,t:'sawtooth',v:0.20},{f:220,d:0.12,t:'sawtooth',v:0.20},{f:330,d:0.18,t:'sawtooth',v:0.22}]); },
   coinGet()     { this.tone(1200, 0.06, 'triangle', 0.10, 1600); },
+  bigCoin()     { this.seq([{f:880,d:0.06,t:'triangle',v:0.16},{f:1320,d:0.06,t:'triangle',v:0.18},{f:1760,d:0.14,t:'triangle',v:0.20}]); },
   powerup()     { this.seq([{f:660,d:0.08,t:'triangle',v:0.18},{f:990,d:0.10,t:'triangle',v:0.20},{f:1320,d:0.16,t:'triangle',v:0.22}]); },
   bomb()        { this.tone(120, 0.30, 'sawtooth', 0.24, 40); },
   pullN()       { this.tone(440, 0.20, 'triangle', 0.18, 600); },
@@ -448,12 +449,15 @@ function bossDefeated() {
   if (!state.boss) return;
   for (let i = 0; i < 3; i++) burst(state.boss.x + Math.random()*state.boss.w, state.boss.y + Math.random()*state.boss.h, '#ff5252', '#ffeb3b', 24);
   state.shake = 1.0;
-  for (let i = 0; i < 12; i++) {
+  // Boss reward: premium coins worth 5x each
+  const bossX = state.boss.x + state.boss.w/2, bossY = state.boss.y + state.boss.h/2;
+  for (let i = 0; i < 14; i++) {
     state.coins.push({
-      x: state.boss.x + state.boss.w/2 + (Math.random()-0.5)*40,
-      y: state.boss.y + state.boss.h/2,
-      r: 9, bob: Math.random()*Math.PI*2, collected: false,
-      vx: -100 - Math.random()*60, vy: -200 - Math.random()*180,
+      x: bossX + (Math.random()-0.5)*60,
+      y: bossY,
+      r: 13, bob: Math.random()*Math.PI*2, collected: false,
+      vx: -80 - Math.random()*120, vy: -260 - Math.random()*220,
+      value: 5,
     });
   }
   floatText('BOSS DOWN!', state.boss.x + state.boss.w/2, state.boss.y, '#ff5252', 26);
@@ -794,11 +798,18 @@ function update(dt) {
     const dx = (player.x + player.w/2) - c.x, dy = (player.y + player.h/2) - c.y;
     if (dx*dx + dy*dy < (c.r + 18) ** 2) {
       state.coins.splice(i, 1);
-      const v = state.effects.coinValue;
+      const mul = c.value || 1;
+      const v = state.effects.coinValue * mul;
       save.coins += v;
       coinsEl.textContent = save.coins;
-      Sfx.coinGet();
-      if (i % 4 === 0) burst(c.x, c.y, '#ffeb3b', '#fff59d', 6);
+      if (mul >= 5) {
+        Sfx.bigCoin();
+        burst(c.x, c.y, '#ff5252', '#fff59d', 14);
+        floatText('+' + v, c.x, c.y - 8, '#ffeb3b', 18);
+      } else {
+        Sfx.coinGet();
+        if (i % 4 === 0) burst(c.x, c.y, '#ffeb3b', '#fff59d', 6);
+      }
     }
   }
   for (let i = state.pickups.length - 1; i >= 0; i--) {
@@ -1172,15 +1183,57 @@ function drawCoins() {
   for (const c of state.coins) {
     const bob = Math.sin(c.bob) * 2;
     const w = Math.abs(Math.cos(c.bob)) * c.r * 2 + 4;
-    ctx.fillStyle = '#b8860b';
-    ctx.beginPath(); ctx.ellipse(c.x, c.y + bob + 1, w/2, c.r, 0, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#ffd700';
-    ctx.beginPath(); ctx.ellipse(c.x, c.y + bob, w/2, c.r, 0, 0, Math.PI*2); ctx.fill();
-    if (w > 6) {
-      ctx.fillStyle = '#fff59d';
-      ctx.font = '700 10px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('¥', c.x, c.y + bob);
-      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    const isPremium = (c.value || 1) >= 5;
+    if (isPremium) {
+      // halo
+      const gd = ctx.createRadialGradient(c.x, c.y + bob, 4, c.x, c.y + bob, c.r * 2.4);
+      gd.addColorStop(0, 'rgba(255,235,59,0.55)');
+      gd.addColorStop(0.5, 'rgba(255,82,82,0.25)');
+      gd.addColorStop(1, 'rgba(255,82,82,0)');
+      ctx.fillStyle = gd;
+      ctx.fillRect(c.x - c.r*2.4, c.y + bob - c.r*2.4, c.r*4.8, c.r*4.8);
+      // edge
+      ctx.fillStyle = '#7c1d1d';
+      ctx.beginPath(); ctx.ellipse(c.x, c.y + bob + 2, w/2 + 1, c.r + 1, 0, 0, Math.PI*2); ctx.fill();
+      // gem face (gradient)
+      const gf = ctx.createLinearGradient(c.x, c.y + bob - c.r, c.x, c.y + bob + c.r);
+      gf.addColorStop(0, '#fff59d');
+      gf.addColorStop(0.5, '#ff5252');
+      gf.addColorStop(1, '#7e57c2');
+      ctx.fillStyle = gf;
+      ctx.beginPath(); ctx.ellipse(c.x, c.y + bob, w/2, c.r, 0, 0, Math.PI*2); ctx.fill();
+      // shine
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.beginPath(); ctx.ellipse(c.x - 3, c.y + bob - 4, w/4, c.r/3, -0.3, 0, Math.PI*2); ctx.fill();
+      // "5"
+      if (w > 8) {
+        ctx.fillStyle = '#fff';
+        ctx.font = '900 13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 2;
+        ctx.strokeText('5', c.x, c.y + bob);
+        ctx.fillText('5', c.x, c.y + bob);
+        ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      }
+      // sparkle particle
+      if (Math.random() < 0.18) {
+        state.particles.push({
+          x: c.x + (Math.random()-0.5) * c.r * 2,
+          y: c.y + bob + (Math.random()-0.5) * c.r * 2,
+          vx: (Math.random()-0.5) * 30, vy: -20 - Math.random() * 30,
+          life: 0.5, age: 0, r: 1.5 + Math.random(), c: Math.random() < 0.5 ? '#fff59d' : '#ff5252',
+        });
+      }
+    } else {
+      ctx.fillStyle = '#b8860b';
+      ctx.beginPath(); ctx.ellipse(c.x, c.y + bob + 1, w/2, c.r, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#ffd700';
+      ctx.beginPath(); ctx.ellipse(c.x, c.y + bob, w/2, c.r, 0, 0, Math.PI*2); ctx.fill();
+      if (w > 6) {
+        ctx.fillStyle = '#fff59d';
+        ctx.font = '700 10px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('¥', c.x, c.y + bob);
+        ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      }
     }
   }
 }
