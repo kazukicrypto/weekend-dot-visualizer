@@ -1,0 +1,133 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: #0a0a14;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding: 8px;
+  gap: 8px;
+}
+
+#game {
+  width: 100%;
+  max-width: 800px;
+  height: auto;
+  aspect-ratio: 8 / 5;
+  background: #142;
+  border: 2px solid #2a3050;
+  border-radius: 6px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  display: block;
+}
+
+#hud {
+  width: 100%;
+  max-width: 800px;
+}
+
+#weapons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+button {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: bold;
+  background: #1c2240;
+  color: #fff;
+  border: 2px solid #3a4070;
+  border-radius: 8px;
+  padding: 12px 4px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: transform 0.05s, background 0.1s;
+  touch-action: manipulation;
+}
+
+button:active {
+  transform: scale(0.96);
+  background: #2c3260;
+}
+
+.weapon .icon, #shield .icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.weapon .key, #shield .key {
+  font-size: 10px;
+  color: #8090c0;
+  letter-spacing: 1px;
+}
+
+.weapon .cost {
+  font-size: 10px;
+  color: #ffd066;
+}
+
+#shield {
+  background: #1c3040;
+  border-color: #3a6070;
+}
+
+#shield:active {
+  background: #2c5060;
+}
+
+#overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+#overlay.hidden { display: none; }
+
+.overlay-inner {
+  background: #1c2240;
+  border: 2px solid #3a4070;
+  border-radius: 12px;
+  padding: 32px;
+  text-align: center;
+  min-width: 280px;
+}
+
+#overlay-title {
+  font-size: 36px;
+  margin-bottom: 12px;
+  letter-spacing: 4px;
+}
+
+#overlay-title.victory { color: #ffd066; }
+#overlay-title.defeat { color: #ff6b6b; }
+
+#overlay-text { margin-bottom: 24px; }
+
+#restart {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+  background: #4060a0;
+  border-color: #6080c0;
+}
