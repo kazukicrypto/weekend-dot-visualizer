@@ -1270,6 +1270,137 @@ html, body {
   box-shadow: 0 8px 24px rgba(0,0,0,0.6);
 }
 
+/* ===== Quest list ===== */
+#quest-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.quest-item {
+  background: linear-gradient(180deg, #4a3520 0%, #2a1a10 100%);
+  border: 2px solid #8b6940;
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.quest-item.completed { border-color: #ffd066; box-shadow: 0 0 6px rgba(255,208,102,0.4); }
+.quest-item.claimed   { opacity: 0.5; filter: grayscale(0.6); }
+
+.quest-row { display: flex; align-items: center; gap: 8px; }
+.quest-name { flex: 1; font-size: 12px; font-weight: bold; color: #fff; text-shadow: 1px 1px 0 #000; }
+.quest-reward { font-size: 12px; font-weight: 900; color: #ffd066; text-shadow: 1px 1px 0 #000; }
+
+.quest-bar {
+  height: 8px;
+  background: #1a0e04;
+  border: 1px solid #000;
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+.quest-bar-fill {
+  height: 100%;
+  background: linear-gradient(180deg, #6dd654 0%, #2a9819 100%);
+  width: 0%;
+  transition: width 0.3s;
+}
+.quest-progress {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: bold; color: #fff; text-shadow: 1px 1px 0 #000;
+}
+
+.quest-claim-btn {
+  font-family: inherit;
+  background: linear-gradient(180deg, #ffd066 0%, #c8a040 100%);
+  color: #3a2410;
+  font-weight: 900;
+  border: 2px solid #8b6940;
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 11px;
+}
+.quest-claim-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ===== Blacksmith ===== */
+#kaji-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+/* ===== Pet section ===== */
+.pet-block {
+  background: linear-gradient(180deg, #2a3050 0%, #15182a 100%);
+  border: 2px solid #80c0ff;
+  border-radius: 8px;
+  padding: 10px;
+  margin: 8px 0;
+}
+.pet-block-title {
+  font-size: 12px;
+  font-weight: bold;
+  color: #ffe0a0;
+  margin-bottom: 6px;
+  letter-spacing: 1px;
+}
+.pet-current {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 6px;
+}
+.pet-emoji {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.pet-meta { flex: 1; }
+.pet-name { font-size: 14px; font-weight: bold; color: #fff; text-shadow: 1px 1px 0 #000; }
+.pet-stats { font-size: 10px; color: #aaa; }
+
+#pet-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+  gap: 6px;
+  margin-top: 6px;
+}
+.pet-card {
+  font-family: inherit;
+  background: linear-gradient(180deg, #3a2818 0%, #1a0e04 100%);
+  border: 2px solid #8b6940;
+  border-radius: 5px;
+  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: #fff;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.05s;
+}
+.pet-card:active:not(.equipped) { transform: scale(0.95); }
+.pet-card.equipped { background: linear-gradient(180deg, #2a4a78 0%, #1a3050 100%); cursor: default; }
+.pet-card .pet-card-name { font-size: 10px; color: #ffe0a0; text-align: center; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.pet-card .pet-card-tag { font-size: 9px; color: #aaa; }
+.pet-card .equipped-badge { position: absolute; top: -6px; right: -4px; }
+
 /* ===== Fusion modal ===== */
 #fuse-base {
   background: linear-gradient(180deg, #4a3520 0%, #2a1a10 100%);

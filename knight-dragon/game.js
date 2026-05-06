@@ -355,6 +355,30 @@ let lastTime = 0;
 let shake = 0;
 
 const SAVE_KEY = 'kishidora_save_v2';
+
+// Quest definitions
+const QUESTS = [
+  { id: 'kill100',     name: '敵を100体倒す',          target: 100, kind: 'enemiesDefeated',   reward: 800 },
+  { id: 'stages5',     name: 'ステージを5回クリア',    target: 5,   kind: 'stagesCleared',     reward: 500 },
+  { id: 'piyo20',      name: 'PIYO状態を20回発生',     target: 20,  kind: 'piyoTriggered',     reward: 600 },
+  { id: 'special10',   name: '必殺技を10回発動',       target: 10,  kind: 'specialsFired',     reward: 700 },
+  { id: 'guard30',     name: 'JUST/MIRACLE 30回',      target: 30,  kind: 'guardsSucceeded',   reward: 600 },
+  { id: 'goldDragon1', name: '金のドラゴン撃破',       target: 1,   kind: 'goldDragonsKilled', reward: 1500 },
+  { id: 'ur1',         name: 'UR装備を1個入手',        target: 1,   kind: 'ursAcquired',       reward: 2000 },
+  { id: 'level10',     name: 'レベル10到達',           target: 10,  kind: 'level',             reward: 1500 },
+];
+
+function defaultQuestState() {
+  return {
+    enemiesDefeated: 0,
+    stagesCleared: 0,
+    piyoTriggered: 0,
+    specialsFired: 0,
+    guardsSucceeded: 0,
+    goldDragonsKilled: 0,
+    ursAcquired: 0,
+  };
+}
 const TYPE_NAMES = { sword: '剣', spear: '槍', hammer: 'ハンマー', shield: '盾' };
 const ITEM_TYPES = ['sword', 'spear', 'hammer', 'shield'];
 
@@ -409,6 +433,11 @@ function saveProgress() {
       exp: state.exp,
       gold: state.gold,
       meatCount: state.meatCount,
+      pets: state.pets,
+      equippedPetId: state.equippedPetId,
+      nextPetId: state.nextPetId,
+      quests: state.quests,
+      questsClaimed: state.questsClaimed,
     }));
   } catch (e) {}
 }
@@ -479,6 +508,22 @@ function resetState() {
     clearedStages: saved.clearedStages || [],
   } : { ...defaultInventory(), clearedStages: [] };
 
+  // Pet collection (migrate or default)
+  let petsInit;
+  if (saved && saved.pets && saved.equippedPetId) {
+    petsInit = {
+      pets: saved.pets,
+      equippedPetId: saved.equippedPetId,
+      nextPetId: saved.nextPetId || (Math.max(0, ...saved.pets.map(p => p.id)) + 1),
+    };
+  } else {
+    petsInit = createDefaultPetCollection();
+  }
+
+  // Quests
+  const questsInit = (saved && saved.quests) ? Object.assign(defaultQuestState(), saved.quests) : defaultQuestState();
+  const questsClaimedInit = (saved && saved.questsClaimed) ? saved.questsClaimed.slice() : [];
+
   state = {
     scene: 'mainMenu',
     level: (saved && saved.level) || 1,
@@ -502,7 +547,12 @@ function resetState() {
     nextItemId: initial.nextItemId,
     clearedStages: initial.clearedStages,
     chests: [],
-    pet: createPet(),
+    pets: petsInit.pets,
+    equippedPetId: petsInit.equippedPetId,
+    nextPetId: petsInit.nextPetId,
+    pet: null,
+    quests: questsInit,
+    questsClaimed: questsClaimedInit,
     goldenDragon: null,
     nullifyNext: false,
     goldRushTimer: 0,
@@ -519,6 +569,7 @@ function resetState() {
     clouds: makeClouds(),
   };
   state.knight = createKnight();
+  activatePetRuntime();
   syncHud();
   showMainMenu();
 }
@@ -646,6 +697,7 @@ function tryHitGoldenDragon(sx, sy) {
 
 function onGoldenDragonDefeated() {
   state.goldenDragon = null;
+  state.quests.goldDragonsKilled = (state.quests.goldDragonsKilled || 0) + 1;
   addFloat('★ 金のドラゴン撃破!', W / 2, 100, '#ffd066', 2.0, 28);
   sound.victory();
   // Transition to hidden bonus stage
@@ -725,23 +777,63 @@ function endBonusStage() {
   setTimeout(() => { if (state.scene === 'battle') onRoundClear(); }, 1300);
 }
 
-// Pet companion (always active during battle)
-const PET_TYPES = {
-  fairy: { name: 'フェアリー', dmg: 8, cooldown: 4.0 },
+// Pet companions — 10 species, each with a specialty
+const PET_DEFS = {
+  fairy:    { name: 'フェアリー',     emoji: '🧚', tag: 'バランス',  dmg: 8,  cooldown: 4.0, color: '#ff90c0' },
+  imp:      { name: 'インプ',         emoji: '😈', tag: '攻撃型',    dmg: 14, cooldown: 5.0, color: '#a050d0' },
+  slimer:   { name: 'スライムちゃん', emoji: '🟦', tag: '速攻',      dmg: 4,  cooldown: 2.0, color: '#5cf' },
+  flame:    { name: '火の精霊',       emoji: '🔥', tag: '高威力',    dmg: 20, cooldown: 6.0, color: '#ff5040' },
+  frost:    { name: '氷の精霊',       emoji: '❄️', tag: '減速',      dmg: 14, cooldown: 5.0, color: '#80c0ff' },
+  thunder:  { name: '雷の精霊',       emoji: '⚡', tag: '一撃',      dmg: 28, cooldown: 7.0, color: '#ffff80' },
+  dragonet: { name: '子ドラゴン',     emoji: '🐲', tag: '高威力',    dmg: 30, cooldown: 8.0, color: '#d62828' },
+  goldbird: { name: '黄金鳥',         emoji: '🐤', tag: '金運',      dmg: 6,  cooldown: 4.0, color: '#ffd066', goldBonus: 0.5 },
+  healer:   { name: '治癒妖精',       emoji: '🌿', tag: '回復',      dmg: 0,  cooldown: 5.0, color: '#80ffa0', healHp: 8 },
+  guardian: { name: '守護天使',       emoji: '👼', tag: '守護',      dmg: 5,  cooldown: 4.0, color: '#fff8c0', defBonus: 0.06 },
 };
-function createPet() {
-  return { type: 'fairy', timer: 4.0, attackAnim: 0, targetX: 0, targetY: 0 };
+
+const PET_KEYS = Object.keys(PET_DEFS);
+const PET_RARITY_COMMON = ['fairy', 'slimer', 'imp'];
+const PET_RARITY_RARE   = ['imp', 'flame', 'frost', 'thunder', 'goldbird'];
+const PET_RARITY_GOD    = ['thunder', 'dragonet', 'healer', 'goldbird', 'guardian'];
+
+function createDefaultPetCollection() {
+  let id = 1;
+  const pets = [{ id: id++, type: 'fairy' }];
+  return { pets, equippedPetId: 1, nextPetId: id };
 }
+
+function getEquippedPetDef() {
+  const owned = (state.pets || []).find(p => p.id === state.equippedPetId);
+  if (!owned) return PET_DEFS.fairy;
+  return PET_DEFS[owned.type] || PET_DEFS.fairy;
+}
+
+function activatePetRuntime() {
+  const def = getEquippedPetDef();
+  state.pet = { type: keyOfPet(def), timer: def.cooldown, attackAnim: 0, targetX: 0, targetY: 0 };
+}
+function keyOfPet(def) {
+  for (const k of PET_KEYS) if (PET_DEFS[k] === def) return k;
+  return 'fairy';
+}
+
 function petAttack() {
   if (state.scene !== 'battle' || state.paused || !state.pet) return;
   const alive = aliveEnemies();
   if (alive.length === 0) return;
+  const def = getEquippedPetDef();
+  // Healer: heals knight instead of (or in addition to) attacking
+  if (def.healHp) {
+    const heal = def.healHp + Math.floor(state.level / 2);
+    state.knight.hp = Math.min(state.knight.maxHp, state.knight.hp + heal);
+    addFloat(`+${heal} HP`, state.knight.x, state.knight.y - 40, '#80ffa0', 0.9, 14);
+  }
+  if (def.dmg <= 0) return;
   const target = alive[Math.floor(Math.random() * alive.length)];
-  const cfg = PET_TYPES[state.pet.type] || PET_TYPES.fairy;
-  const dmg = cfg.dmg + state.level;
+  const dmg = def.dmg + state.level;
   target.hp = Math.max(0, target.hp - dmg);
   target.hitTimer = 0.2;
-  addFloat(`✦${dmg}`, target.x, target.y - 40, '#80ffff', 0.8, 14);
+  addFloat(`✦${dmg}`, target.x, target.y - 40, def.color || '#80ffff', 0.8, 14);
   state.pet.attackAnim = 0.5;
   state.pet.targetX = target.x;
   state.pet.targetY = target.y;
@@ -753,13 +845,18 @@ function aliveEnemies() {
   return state.enemies.filter(e => e.hp > 0);
 }
 
-// Award gold for a kill (handles bonus dragons + GOLD RUSH x2)
+// Award gold for a kill (handles bonus dragons + GOLD RUSH x2 + pet goldBonus)
 function awardGoldForKill(target) {
   if (!target || target._goldGiven) return;
   target._goldGiven = true;
-  const base = target.bonus ? 100 : Math.max(2, Math.floor(target.maxHp / 8));
+  const baseRaw = target.bonus ? 100 : Math.max(2, Math.floor(target.maxHp / 8));
+  const petDef = getEquippedPetDef();
+  const petBoost = petDef && petDef.goldBonus ? (1 + petDef.goldBonus) : 1;
+  const base = Math.floor(baseRaw * petBoost);
   const reward = state.goldRushTimer > 0 ? base * 2 : base;
   state.gold = (state.gold || 0) + reward;
+  // Quest tracking
+  state.quests.enemiesDefeated = (state.quests.enemiesDefeated || 0) + 1;
   addFloat(`💰+${reward}${state.goldRushTimer > 0 ? ' x2' : ''}`, target.x, target.y - 18, '#ffd066', 1.0, target.bonus ? 18 : 14);
 }
 
@@ -910,6 +1007,7 @@ function attack(weaponKey) {
         target.attackTimer = 999;
         sound.piyo();
         addFloat('PIYO!!', target.x, target.y - 60, '#ffeb3b', 1.2, 24);
+        state.quests.piyoTriggered = (state.quests.piyoTriggered || 0) + 1;
       }
     } else {
       k.ap = Math.min(k.maxAp, k.ap + 0.5);
@@ -960,6 +1058,7 @@ function fireSpecial(special) {
   state.specialFx = { name: special.name, color: special.color, hits: special.hits };
   state.specialFxTimer = 1.4;
   sound.special();
+  state.quests.specialsFired = (state.quests.specialsFired || 0) + 1;
 
   const totalDmg = special.dmg;
   const hits = special.hits || 1;
@@ -1006,6 +1105,9 @@ function tryGuard() {
   if (t < 0.07 + guardWindow)        { kind = 'MIRACLE'; dmgMult = 0;   apGain = 2; hpGain = 18; color = '#ff80ff'; }
   else if (t < 0.20 + guardWindow)   { kind = 'JUST';    dmgMult = 0.1; apGain = 1; color = '#ffeb3b'; }
   else                               { kind = 'GUARD';   dmgMult = 0.4; color = '#80c0ff'; }
+  if (kind === 'JUST' || kind === 'MIRACLE') {
+    state.quests.guardsSucceeded = (state.quests.guardsSucceeded || 0) + 1;
+  }
 
   const atkDmg = (incoming.pendingAtk && incoming.pendingAtk.dmg) || incoming.atkDmg;
   const dmg = Math.round(atkDmg * dmgMult * (1 - defBonus));
@@ -1155,6 +1257,7 @@ function onStageClear() {
   if (!state.clearedStages.includes(state.stageIdx)) {
     state.clearedStages.push(state.stageIdx);
   }
+  state.quests.stagesCleared = (state.quests.stagesCleared || 0) + 1;
   // Grant EXP based on stage difficulty
   const expGained = 60 + state.stageIdx * 40;
   state._expGained = expGained;
@@ -1292,6 +1395,9 @@ function rollItem(type, rarity, plus) {
       item.urVariant = idx;
       item.name = variants[idx].name;
     }
+    if (state && state.quests) {
+      state.quests.ursAcquired = (state.quests.ursAcquired || 0) + 1;
+    }
   }
   return item;
 }
@@ -1371,7 +1477,7 @@ function renderChestStack() {
 // ============================================================
 // SCENE: MAIN MENU
 // ============================================================
-const MENU_SCREENS = ['main-menu', 'stage-select', 'equipment-screen', 'result-screen', 'shop-screen', 'fuse-screen'];
+const MENU_SCREENS = ['main-menu', 'stage-select', 'equipment-screen', 'result-screen', 'shop-screen', 'fuse-screen', 'quest-screen', 'kaji-screen'];
 function hideAllScreens() {
   for (const id of MENU_SCREENS) {
     const el = document.getElementById(id);
@@ -1425,7 +1531,52 @@ function showEquipmentScreen() {
   hideAllScreens();
   document.getElementById('equipment-screen').classList.remove('hidden');
   renderEquippedGrid();
+  renderPetSection();
   renderInventoryList();
+}
+
+function renderPetSection() {
+  const cur = document.getElementById('pet-current');
+  const list = document.getElementById('pet-list');
+  if (!cur || !list) return;
+  const def = getEquippedPetDef();
+  cur.innerHTML = `
+    <div class="pet-current">
+      <div class="pet-emoji" style="background:${def.color}">${def.emoji}</div>
+      <div class="pet-meta">
+        <div class="pet-name">${def.name} <span style="color:#ffd066;font-size:10px;">[${def.tag}]</span></div>
+        <div class="pet-stats">攻撃 ${def.dmg}  /  CD ${def.cooldown}s${def.healHp ? `  /  HP回復 ${def.healHp}` : ''}${def.goldBonus ? `  /  ゴールド +${Math.round(def.goldBonus*100)}%` : ''}${def.defBonus ? `  /  防御 +${Math.round(def.defBonus*100)}%` : ''}</div>
+      </div>
+    </div>
+  `;
+  list.innerHTML = '';
+  // Group owned pets by type, show one card per unique type with count
+  const counts = {};
+  for (const p of (state.pets || [])) counts[p.type] = (counts[p.type] || 0) + 1;
+  const seen = new Set();
+  for (const p of (state.pets || [])) {
+    if (seen.has(p.type)) continue;
+    seen.add(p.type);
+    const pdef = PET_DEFS[p.type];
+    if (!pdef) continue;
+    const isEq = state.equippedPetId === p.id || (state.pets.find(q => q.id === state.equippedPetId) && state.pets.find(q => q.id === state.equippedPetId).type === p.type);
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = `pet-card${isEq ? ' equipped' : ''}`;
+    card.innerHTML = `
+      <div class="pet-emoji" style="background:${pdef.color};width:30px;height:30px;font-size:16px">${pdef.emoji}</div>
+      <div class="pet-card-name">${pdef.name}</div>
+      <div class="pet-card-tag">×${counts[p.type]}</div>
+      ${isEq ? '<div class="equipped-badge">装備</div>' : ''}
+    `;
+    if (!isEq) {
+      card.addEventListener('click', () => { equipPet(p.id); renderPetSection(); });
+    }
+    list.appendChild(card);
+  }
+  if (list.children.length === 0) {
+    list.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#aaa;padding:10px">ペットなし</p>';
+  }
 }
 
 function renderEquippedGrid() {
@@ -1444,8 +1595,6 @@ function renderEquippedGrid() {
         ).join('')}</div>`
       : '<div class="equip-effects empty">効果なし</div>';
     const iconId = item ? getItemIconId(item) : ('ico-' + t);
-    const materialCount = item ? state.inventory.filter(i => i.type === t && i.id !== item.id).length : 0;
-    const fuseBtn = item && materialCount > 0 ? `<button class="fuse-btn" data-fuse-type="${t}">🔨 強化(${materialCount})</button>` : '';
     card.innerHTML = `
       <div class="equip-head">
         <svg class="equip-icon"><use href="#${iconId}"/></svg>
@@ -1454,17 +1603,9 @@ function renderEquippedGrid() {
           <div class="equip-name">${item ? (item.name || itemName(t, item.rarity)) : '未装備'}</div>
           ${item ? `<div class="equip-stats"><span class="rarity-tag">${RARITY_LABEL[item.rarity]}</span><span class="plus-tag">+${item.plus}</span></div>` : ''}
         </div>
-        ${fuseBtn}
       </div>
       ${effHtml}
     `;
-    const fuseBtnEl = card.querySelector('.fuse-btn');
-    if (fuseBtnEl) {
-      fuseBtnEl.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        showFuseScreen(t);
-      });
-    }
     grid.appendChild(card);
   }
 }
@@ -1566,12 +1707,11 @@ function confirmFusion() {
   saveProgress();
   sound.special();
   showShopToast(`${baseItem.name} +${baseItem.plus} に強化!\n+${gain} 強化値`);
-  // Return to equipment screen
+  // Return to blacksmith
   hideAllScreens();
-  document.getElementById('equipment-screen').classList.remove('hidden');
-  state.scene = 'equipment';
-  renderEquippedGrid();
-  renderInventoryList();
+  document.getElementById('kaji-screen').classList.remove('hidden');
+  state.scene = 'blacksmith';
+  renderBlacksmithList();
   syncHud();
 }
 
@@ -1648,10 +1788,10 @@ function equipItem(itemId) {
 // SCENE: SHOP
 // ============================================================
 const SHOP_ITEMS = [
-  { id: 'meat',    icon: '🍖', name: 'マンガ肉', desc: '次のステージにマンガ肉×1を追加', cost: 80,   action: 'meat' },
-  { id: 'r',       icon: '🎁', name: '武器ガチャ',     desc: 'レア(R)以上の武器1点が確定', cost: 250,  action: 'gacha_r',  rarity: 'r' },
-  { id: 'sr',      icon: '⭐', name: 'SR武器ガチャ',    desc: 'SR以上の武器1点が確定',     cost: 1200, action: 'gacha_sr', rarity: 'sr' },
-  { id: 'ur',      icon: '🌟', name: 'UR武器ガチャ',    desc: 'UR武器1点が確定',           cost: 6000, action: 'gacha_ur', rarity: 'ur' },
+  { id: 'meat',     icon: '🍖', name: 'マンガ肉',     desc: '次のステージにマンガ肉×1を追加', cost: 80,   action: 'meat' },
+  { id: 'eggCom',   icon: '🥚', name: 'コモンの卵',   desc: 'ペット1匹（コモン中心）',         cost: 300,  action: 'egg_common', rarity: 'r' },
+  { id: 'eggRare',  icon: '🍳', name: 'レアな卵',     desc: 'ペット1匹（レア中心）',           cost: 1500, action: 'egg_rare',   rarity: 'sr' },
+  { id: 'eggGod',   icon: '🌟', name: '神秘の卵',     desc: 'ペット1匹（最高ランク）',         cost: 6000, action: 'egg_god',    rarity: 'ur' },
 ];
 
 function showShopScreen() {
@@ -1693,45 +1833,33 @@ function buyShopItem(item) {
   if (item.action === 'meat') {
     state.meatCount = (state.meatCount || 0) + 1;
     showShopToast('🍖 マンガ肉 を入手！\n次のバトルで使えます');
-  } else if (item.action === 'gacha_r') {
-    const got = rollShopGacha('r');
-    showShopToast(`${got.name} +${got.plus}\n[${RARITY_LABEL[got.rarity]}] を入手!`);
-  } else if (item.action === 'gacha_sr') {
-    const got = rollShopGacha('sr');
-    showShopToast(`${got.name} +${got.plus}\n[${RARITY_LABEL[got.rarity]}] を入手!`);
-  } else if (item.action === 'gacha_ur') {
-    const got = rollShopGacha('ur');
-    showShopToast(`★ ${got.name} +${got.plus}\n[${RARITY_LABEL[got.rarity]}] を入手! ★`);
+  } else if (item.action === 'egg_common') {
+    const pet = rollPetEgg('common');
+    const def = PET_DEFS[pet.type];
+    showShopToast(`${def.emoji} ${def.name} を仲間にした！\n[${def.tag}]`);
+  } else if (item.action === 'egg_rare') {
+    const pet = rollPetEgg('rare');
+    const def = PET_DEFS[pet.type];
+    showShopToast(`${def.emoji} ${def.name} を仲間にした！\n[${def.tag}]`);
+  } else if (item.action === 'egg_god') {
+    const pet = rollPetEgg('god');
+    const def = PET_DEFS[pet.type];
+    showShopToast(`★ ${def.emoji} ${def.name} を仲間にした！\n[${def.tag}] ★`);
   }
   sound.drop();
   saveProgress();
   renderShopList();
 }
 
-function rollShopGacha(minRarity) {
-  const types = ITEM_TYPES;
-  const type = types[Math.floor(Math.random() * types.length)];
-  let rarity, plus;
-  if (minRarity === 'ur') {
-    rarity = 'ur'; plus = 5;
-  } else if (minRarity === 'sr') {
-    const r = Math.random();
-    if (r < 0.20) { rarity = 'ur'; plus = 4; }
-    else { rarity = 'sr'; plus = 3; }
-  } else { // 'r'
-    const r = Math.random();
-    if (r < 0.05) { rarity = 'ur'; plus = 4; }
-    else if (r < 0.25) { rarity = 'sr'; plus = 3; }
-    else { rarity = 'r'; plus = 2; }
-  }
-  const newItem = rollItem(type, rarity, plus);
-  state.inventory.push(newItem);
-  // Auto-equip if better
-  const cur = getEquippedItem(type);
-  const better = !cur || RARITY_RANK[rarity] > RARITY_RANK[cur.rarity] ||
-    (rarity === cur.rarity && plus > cur.plus);
-  if (better) state.equipped[type] = newItem.id;
-  return newItem;
+function rollPetEgg(tier) {
+  const pool = tier === 'god' ? PET_RARITY_GOD
+            : tier === 'rare' ? PET_RARITY_RARE
+            : PET_RARITY_COMMON;
+  const type = pool[Math.floor(Math.random() * pool.length)];
+  const newPet = { id: state.nextPetId++, type };
+  state.pets.push(newPet);
+  // First pet of a new type → auto-equip if user has the default fairy still and this is rarer
+  return newPet;
 }
 
 function showShopToast(text) {
@@ -1751,6 +1879,111 @@ function showShopToast(text) {
     toast.style.opacity = '0';
     setTimeout(() => { toast.style.display = 'none'; }, 320);
   }, 1800);
+}
+
+// ============================================================
+// SCENE: QUEST
+// ============================================================
+function showQuestScreen() {
+  state.scene = 'quest';
+  hideOverlay();
+  hideAllScreens();
+  document.getElementById('quest-screen').classList.remove('hidden');
+  renderQuestList();
+}
+
+function questProgress(q) {
+  if (q.kind === 'level') return state.level || 0;
+  return (state.quests && state.quests[q.kind]) || 0;
+}
+
+function renderQuestList() {
+  const list = document.getElementById('quest-list');
+  if (!list) return;
+  list.innerHTML = '';
+  for (const q of QUESTS) {
+    const cur = Math.min(q.target, questProgress(q));
+    const completed = cur >= q.target;
+    const claimed = state.questsClaimed.includes(q.id);
+    const item = document.createElement('div');
+    item.className = `quest-item${completed ? ' completed' : ''}${claimed ? ' claimed' : ''}`;
+    const pct = Math.min(100, (cur / q.target) * 100);
+    item.innerHTML = `
+      <div class="quest-row">
+        <div class="quest-name">${q.name}</div>
+        <div class="quest-reward">💰+${q.reward}</div>
+        <button class="quest-claim-btn">${claimed ? '受取済' : (completed ? '受け取る' : '進行中')}</button>
+      </div>
+      <div class="quest-bar"><div class="quest-bar-fill" style="width:${pct}%"></div><span class="quest-progress">${cur} / ${q.target}</span></div>
+    `;
+    const btn = item.querySelector('.quest-claim-btn');
+    btn.disabled = claimed || !completed;
+    if (completed && !claimed) {
+      btn.addEventListener('click', () => {
+        state.questsClaimed.push(q.id);
+        state.gold = (state.gold || 0) + q.reward;
+        saveProgress();
+        sound.victory();
+        showShopToast(`💰 +${q.reward} GOLD を獲得！`);
+        renderQuestList();
+      });
+    }
+    list.appendChild(item);
+  }
+}
+
+// ============================================================
+// SCENE: BLACKSMITH
+// ============================================================
+function showBlacksmithScreen() {
+  state.scene = 'blacksmith';
+  hideOverlay();
+  hideAllScreens();
+  document.getElementById('kaji-screen').classList.remove('hidden');
+  renderBlacksmithList();
+}
+
+function renderBlacksmithList() {
+  const list = document.getElementById('kaji-list');
+  if (!list) return;
+  list.innerHTML = '';
+  for (const t of ITEM_TYPES) {
+    const item = getEquippedItem(t);
+    const matCount = item ? state.inventory.filter(i => i.type === t && i.id !== item.id).length : 0;
+    const card = document.createElement('div');
+    const rarity = item ? item.rarity : 'common';
+    card.className = `equip-card rarity-${rarity}`;
+    const iconId = item ? getItemIconId(item) : ('ico-' + t);
+    const fuseBtn = item && matCount > 0
+      ? `<button class="fuse-btn" data-fuse-type="${t}">🔨 強化(${matCount})</button>`
+      : `<button class="fuse-btn" disabled>素材なし</button>`;
+    card.innerHTML = `
+      <div class="equip-head">
+        <svg class="equip-icon"><use href="#${iconId}"/></svg>
+        <div class="equip-meta">
+          <div class="equip-slot-label">${TYPE_NAMES[t]}</div>
+          <div class="equip-name">${item ? (item.name || itemName(t, item.rarity)) : '未装備'}</div>
+          ${item ? `<div class="equip-stats"><span class="rarity-tag">${RARITY_LABEL[item.rarity]}</span><span class="plus-tag">+${item.plus}</span></div>` : ''}
+        </div>
+        ${fuseBtn}
+      </div>
+    `;
+    const btn = card.querySelector('.fuse-btn');
+    if (btn && !btn.disabled) {
+      btn.addEventListener('click', (ev) => { ev.stopPropagation(); showFuseScreen(t); });
+    }
+    list.appendChild(card);
+  }
+}
+
+// ============================================================
+// PET MANAGEMENT
+// ============================================================
+function equipPet(petId) {
+  if (!(state.pets || []).some(p => p.id === petId)) return;
+  state.equippedPetId = petId;
+  activatePetRuntime();
+  saveProgress();
 }
 
 function showStageSelect() {
@@ -1799,7 +2032,7 @@ function startStage(idx) {
   state.hitComboTimer = 0;
   state.paused = false;
   state.goldenDragon = null;
-  state.pet = createPet();
+  activatePetRuntime();
   state.nullifyNext = false;
   state.goldRushTimer = 0;
   hideAllScreens();
@@ -3338,6 +3571,14 @@ function bindUi() {
   const shopBack = document.getElementById('shop-back');
   if (shopBack) shopBack.addEventListener('click', () => { ensureAudio(); showMainMenu(); });
 
+  // Quest back
+  const questBack = document.getElementById('quest-back');
+  if (questBack) questBack.addEventListener('click', () => { ensureAudio(); showMainMenu(); });
+
+  // Blacksmith back
+  const kajiBack = document.getElementById('kaji-back');
+  if (kajiBack) kajiBack.addEventListener('click', () => { ensureAudio(); showMainMenu(); });
+
   // Fusion screen actions
   const fuseConfirm = document.getElementById('fuse-confirm');
   if (fuseConfirm) fuseConfirm.addEventListener('click', () => { ensureAudio(); confirmFusion(); });
@@ -3346,10 +3587,9 @@ function bindUi() {
     ensureAudio();
     state._fuseSelected = new Set();
     hideAllScreens();
-    document.getElementById('equipment-screen').classList.remove('hidden');
-    state.scene = 'equipment';
-    renderEquippedGrid();
-    renderInventoryList();
+    document.getElementById('kaji-screen').classList.remove('hidden');
+    state.scene = 'blacksmith';
+    renderBlacksmithList();
   });
 
   // Main menu icons
@@ -3364,6 +3604,8 @@ function bindUi() {
       if (which === 'oshigoto') showStageSelect();
       else if (which === 'souvi') showEquipmentScreen();
       else if (which === 'shop') showShopScreen();
+      else if (which === 'quest') showQuestScreen();
+      else if (which === 'kaji') showBlacksmithScreen();
     } catch (err) {
       console.error('menu click failed', err);
     }
