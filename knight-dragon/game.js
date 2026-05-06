@@ -866,10 +866,20 @@ function syncHud() {
     if (!btn) continue;
     const move = getCurrentMove(wKey);
     const next = getNextMove(wKey);
-    btn.querySelector('.ap-cost').textContent = move.ap;
-    btn.querySelector('.cur-name').textContent = move.name;
-    btn.querySelector('.next-ap').textContent = next.ap;
-    btn.querySelector('.next-name').textContent = next.name;
+    const curCell = btn.querySelector('.move-cell.current');
+    const nextCell = btn.querySelector('.move-cell.next');
+    if (curCell) {
+      const apEl = curCell.querySelector('.ap-cost');
+      const nameEl = curCell.querySelector('.cell-name');
+      if (apEl) apEl.textContent = move.ap;
+      if (nameEl) nameEl.textContent = move.name;
+    }
+    if (nextCell) {
+      const apEl = nextCell.querySelector('.ap-cost');
+      const nameEl = nextCell.querySelector('.cell-name');
+      if (apEl) apEl.textContent = next.ap;
+      if (nameEl) nameEl.textContent = next.name;
+    }
     btn.disabled = k.ap < move.ap;
   }
 
