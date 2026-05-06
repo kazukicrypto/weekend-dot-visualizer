@@ -109,7 +109,8 @@
       <div id="bars">
         <div class="bar-row">
           <span class="bar-label">HP</span>
-          <div class="bar hp-bar"><div id="hp-fill"></div><span id="hp-text">120/120</span></div>
+          <div class="bar hp-bar"><div id="hp-fill"></div><span id="hp-text">200/200</span></div>
+          <span class="lv-pill">Lv <span id="lv-num">1</span></span>
         </div>
         <div class="bar-row">
           <span class="bar-label">AP</span>
@@ -117,80 +118,69 @@
         </div>
       </div>
 
-      <div id="combat-row">
-        <div class="weapon-col" data-weapon="sword">
-          <div class="eq-slot rarity-r">
-            <svg class="eq-icon"><use href="#ico-sword"/></svg>
-            <span class="eq-name">剣</span>
-            <span class="eq-plus">+1</span>
-          </div>
-          <button class="move-btn" data-weapon="sword">
-            <div class="move-cell current">
-              <span class="ap-cost">2</span>
-              <svg class="move-icon"><use href="#ico-sword"/></svg>
-              <span class="cell-name">斬り上げ</span>
-            </div>
-            <div class="move-cell next">
-              <span class="next-tag">NEXT</span>
-              <span class="ap-cost">3</span>
-              <svg class="move-icon"><use href="#ico-sword"/></svg>
-              <span class="cell-name">ブリ斬</span>
-            </div>
-          </button>
+      <div id="combat-grid">
+        <!-- Row 1: 4 equipment slots -->
+        <div class="eq-slot rarity-common" data-slot="sword">
+          <svg class="eq-icon"><use href="#ico-sword"/></svg>
+          <span class="eq-plus">+0</span>
+        </div>
+        <div class="eq-slot rarity-common" data-slot="spear">
+          <svg class="eq-icon"><use href="#ico-spear"/></svg>
+          <span class="eq-plus">+0</span>
+        </div>
+        <div class="eq-slot rarity-common" data-slot="hammer">
+          <svg class="eq-icon"><use href="#ico-hammer"/></svg>
+          <span class="eq-plus">+0</span>
+        </div>
+        <div class="eq-slot rarity-common" data-slot="shield">
+          <svg class="eq-icon"><use href="#ico-shield"/></svg>
+          <span class="eq-plus">+0</span>
         </div>
 
-        <div class="weapon-col" data-weapon="spear">
-          <div class="eq-slot rarity-sr">
-            <svg class="eq-icon"><use href="#ico-spear"/></svg>
-            <span class="eq-name">槍</span>
-            <span class="eq-plus">+2</span>
-          </div>
-          <button class="move-btn" data-weapon="spear">
-            <div class="move-cell current">
-              <span class="ap-cost">1</span>
-              <svg class="move-icon"><use href="#ico-spear"/></svg>
-              <span class="cell-name">シャベリン</span>
-            </div>
-            <div class="move-cell next">
-              <span class="next-tag">NEXT</span>
-              <span class="ap-cost">2</span>
-              <svg class="move-icon"><use href="#ico-spear"/></svg>
-              <span class="cell-name">キック</span>
-            </div>
-          </button>
-        </div>
+        <!-- Row 2: Current move buttons + Guard -->
+        <button class="current-btn" data-weapon="sword">
+          <span class="ap-cost">2</span>
+          <svg class="move-icon"><use href="#ico-sword"/></svg>
+          <span class="cell-name">斬り上げ</span>
+        </button>
+        <button class="current-btn" data-weapon="spear">
+          <span class="ap-cost">1</span>
+          <svg class="move-icon"><use href="#ico-spear"/></svg>
+          <span class="cell-name">シャベリン</span>
+        </button>
+        <button class="current-btn" data-weapon="hammer">
+          <span class="ap-cost">2</span>
+          <svg class="move-icon"><use href="#ico-hammer"/></svg>
+          <span class="cell-name">ふっとばし</span>
+        </button>
+        <button id="shield" class="side-btn shield-btn">
+          <span class="side-icon">🛡</span>
+          <span class="side-label">ガード</span>
+        </button>
 
-        <div class="weapon-col" data-weapon="hammer">
-          <div class="eq-slot rarity-r">
-            <svg class="eq-icon"><use href="#ico-hammer"/></svg>
-            <span class="eq-name">槌</span>
-            <span class="eq-plus">+1</span>
-          </div>
-          <button class="move-btn" data-weapon="hammer">
-            <div class="move-cell current">
-              <span class="ap-cost">2</span>
-              <svg class="move-icon"><use href="#ico-hammer"/></svg>
-              <span class="cell-name">ふっとばし</span>
-            </div>
-            <div class="move-cell next">
-              <span class="next-tag">NEXT</span>
-              <span class="ap-cost">3</span>
-              <svg class="move-icon"><use href="#ico-hammer"/></svg>
-              <span class="cell-name">大地砕</span>
-            </div>
-          </button>
+        <!-- Row 3: NEXT previews + Meat -->
+        <div class="next-cell" data-weapon="sword">
+          <span class="next-tag">NEXT</span>
+          <span class="next-ap">3</span>
+          <svg class="next-icon"><use href="#ico-sword"/></svg>
+          <span class="next-name">ブリ斬</span>
         </div>
-
-        <div class="action-side">
-          <button id="shield" class="side-btn shield-btn">
-            <span class="side-icon">🛡</span>
-            <span class="side-label">ガード</span>
-          </button>
-          <button id="meat" class="side-btn meat-btn">
-            <span class="side-icon">🍖</span>
-            <span class="side-count" id="meat-count">×2</span>
-          </button>
+        <div class="next-cell" data-weapon="spear">
+          <span class="next-tag">NEXT</span>
+          <span class="next-ap">2</span>
+          <svg class="next-icon"><use href="#ico-spear"/></svg>
+          <span class="next-name">キック</span>
         </div>
+        <div class="next-cell" data-weapon="hammer">
+          <span class="next-tag">NEXT</span>
+          <span class="next-ap">3</span>
+          <svg class="next-icon"><use href="#ico-hammer"/></svg>
+          <span class="next-name">大地砕</span>
+        </div>
+        <button id="meat" class="side-btn meat-btn">
+          <span class="side-icon">🍖</span>
+          <span class="side-count" id="meat-count">×2</span>
+        </button>
       </div>
     </div>
 
