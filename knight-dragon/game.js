@@ -374,9 +374,15 @@ function loadAndMigrate() {
   if (!raw) return null;
   // Already new format
   if (raw.inventory && raw.equipped) {
-    // Backfill names for items saved before naming was introduced
+    // Backfill names + UR variant for items saved before those existed
     for (const item of raw.inventory) {
-      if (!item.name) item.name = itemName(item.type, item.rarity);
+      if (item.rarity === 'ur' && typeof item.urVariant !== 'number') {
+        item.urVariant = 0;
+        const v = UR_VARIANTS[item.type] && UR_VARIANTS[item.type][0];
+        if (v) item.name = v.name;
+      } else if (!item.name) {
+        item.name = itemName(item.type, item.rarity);
+      }
     }
     return raw;
   }
@@ -1017,6 +1023,44 @@ const ITEM_EFFECTS = {
   },
 };
 
+// UR variants — 4 per type, each with its own stat bias.
+// Distribution within each type:
+//   0 = balanced, 1 = primary stat focused, 2 = secondary stat focused, 3 = enhanced balanced
+const UR_VARIANTS = {
+  sword: [
+    { name: 'エクスカリバー',   tag: 'バランス',   dmgBonus: 0.22, critBonus: 0.22 },
+    { name: 'グラム',           tag: '攻撃特化',   dmgBonus: 0.32, critBonus: 0.12 },
+    { name: 'ムラサメ',         tag: '会心特化',   dmgBonus: 0.15, critBonus: 0.32 },
+    { name: 'デュランダル',     tag: '聖騎士',     dmgBonus: 0.27, critBonus: 0.27 },
+  ],
+  spear: [
+    { name: 'グングニル',       tag: 'バランス',   apRegenBonus: 0.40, ppBonus: 0.32 },
+    { name: '飛雷の槍',         tag: 'AP特化',     apRegenBonus: 0.55, ppBonus: 0.20 },
+    { name: 'ロンギヌス',       tag: 'PP特化',     apRegenBonus: 0.28, ppBonus: 0.48 },
+    { name: '神槍ティルフィング', tag: '神器',     apRegenBonus: 0.46, ppBonus: 0.40 },
+  ],
+  hammer: [
+    { name: 'ミョルニル',       tag: 'バランス',   aoeBonus: 0.40, stunBonus: 0.55 },
+    { name: '雷神槌',           tag: 'AOE特化',    aoeBonus: 0.58, stunBonus: 0.32 },
+    { name: '大地砕き槌',       tag: 'PIYO特化',   aoeBonus: 0.25, stunBonus: 0.78 },
+    { name: '神鉄槌',           tag: '神器',       aoeBonus: 0.48, stunBonus: 0.62 },
+  ],
+  shield: [
+    { name: 'アイギス',         tag: 'バランス',   defBonus: 0.30, guardWindow: 0.14 },
+    { name: '不壊の盾',         tag: '防御特化',   defBonus: 0.42, guardWindow: 0.10 },
+    { name: '見切りの盾',       tag: '猶予特化',   defBonus: 0.24, guardWindow: 0.22 },
+    { name: '守護神盾',         tag: '神器',       defBonus: 0.36, guardWindow: 0.18 },
+  ],
+};
+
+function urVariantOf(item) {
+  if (!item || item.rarity !== 'ur') return null;
+  const list = UR_VARIANTS[item.type];
+  if (!list) return null;
+  const idx = (typeof item.urVariant === 'number') ? item.urVariant : 0;
+  return list[idx] || list[0];
+}
+
 function getRarityEff(type, rarity, key) {
   const t = ITEM_EFFECTS[type];
   if (!t) return 0;
@@ -1028,13 +1072,42 @@ function getRarityEff(type, rarity, key) {
 function getEffect(type, key) {
   const item = getEquippedItem(type);
   if (!item) return 0;
+  // UR variants override the base UR table per-stat
+  if (item.rarity === 'ur') {
+    const v = urVariantOf(item);
+    if (v && v[key] !== undefined) return v[key];
+  }
   return getRarityEff(type, item.rarity, key);
+}
+
+// Helper used by chest open / shop / golden dragon.
+// Builds a fresh inventory item, picking a random UR variant when applicable.
+function rollItem(type, rarity, plus) {
+  const item = {
+    id: state.nextItemId++,
+    type,
+    rarity,
+    plus,
+    name: itemName(type, rarity),
+  };
+  if (rarity === 'ur') {
+    const variants = UR_VARIANTS[type] || [];
+    if (variants.length) {
+      const idx = Math.floor(Math.random() * variants.length);
+      item.urVariant = idx;
+      item.name = variants[idx].name;
+    }
+  }
+  return item;
 }
 
 function describeItemEffects(item) {
   if (!item) return [];
-  const eff = (ITEM_EFFECTS[item.type] && ITEM_EFFECTS[item.type][item.rarity]) || {};
+  const baseEff = (ITEM_EFFECTS[item.type] && ITEM_EFFECTS[item.type][item.rarity]) || {};
+  const variant = urVariantOf(item);
+  const eff = variant ? Object.assign({}, baseEff, variant) : baseEff;
   const lines = [];
+  if (variant && variant.tag) lines.push({ label: '種別', value: variant.tag });
   if (item.type === 'sword') {
     if (eff.dmgBonus)  lines.push({ label: '攻撃力',   value: `+${Math.round(eff.dmgBonus * 100)}%` });
     if (eff.critBonus) lines.push({ label: '会心率',   value: `+${Math.round(eff.critBonus * 100)}%` });
@@ -1337,13 +1410,7 @@ function rollShopGacha(minRarity) {
     else if (r < 0.25) { rarity = 'sr'; plus = 3; }
     else { rarity = 'r'; plus = 2; }
   }
-  const newItem = {
-    id: state.nextItemId++,
-    type,
-    rarity,
-    plus,
-    name: itemName(type, rarity),
-  };
+  const newItem = rollItem(type, rarity, plus);
   state.inventory.push(newItem);
   // Auto-equip if better
   const cur = getEquippedItem(type);
@@ -1503,14 +1570,8 @@ function openChest(idx, cardEl) {
   // Allow legacy chests (where field was 'weapon')
   const type = chest.type || chest.weapon;
 
-  // Create a new item and add to inventory
-  const newItem = {
-    id: state.nextItemId++,
-    type,
-    rarity: chest.rarity,
-    plus: chest.plus,
-    name: itemName(type, chest.rarity),
-  };
+  // Create a new item and add to inventory (uses random UR variant when UR)
+  const newItem = rollItem(type, chest.rarity, chest.plus);
   state.inventory.push(newItem);
 
   // Auto-equip if better than current
