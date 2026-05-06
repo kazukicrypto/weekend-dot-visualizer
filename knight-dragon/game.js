@@ -218,6 +218,13 @@ const ENEMIES = {
                altAtk: { name: '岩拳',  dmg: 32, atk: [3.4, 4.4] } },
   rockGolem: { name: 'ロックゴーレム', hp: 540, weak: 'hammer', atkDmg: 28, atk: [2.0, 3.0], color: '#7a4a30', accent: '#3a2a1a', size: 1.8,
                altAtk: { name: '岩塊投げ', dmg: 46, atk: [3.0, 4.0] } },
+  // Endgame bosses
+  sandGolem:  { name: '砂塵ゴーレム',  hp: 360, weak: 'hammer', atkDmg: 22, atk: [2.2, 3.2], color: '#c89060', accent: '#7a4818', size: 1.6,
+                altAtk: { name: '砂嵐', dmg: 36, atk: [3.0, 4.0], aoe: true } },
+  deepDragon: { name: '深海の主',      hp: 560, weak: 'spear',  atkDmg: 26, atk: [2.0, 3.0], color: '#3868c0', accent: '#80c0e8', size: 1.7,
+                altAtk: { name: '津波', dmg: 42, atk: [3.0, 4.0], aoe: true } },
+  demonKing:  { name: '大魔王',        hp: 1100, weak: 'sword', atkDmg: 32, atk: [1.8, 2.6], color: '#5a1040', accent: '#ff4060', size: 2.0,
+                altAtk: { name: '禁術', dmg: 60, atk: [3.4, 4.4], aoe: true } },
 };
 
 const STAGES = [
@@ -291,6 +298,43 @@ const STAGES = [
       ['boarBlue', 'turtle', 'mermaid'],
       ['golem', 'mushroom'],
       ['rockGolem'],
+    ],
+  },
+  {
+    name: '灼熱の砂漠',
+    rounds: [
+      ['boarRed', 'mushroom', 'mushroom'],
+      ['boarRed', 'fabit', 'mushroom'],
+      ['mushroom', 'sandGolem'],
+      ['dragon', 'boarRed'],
+    ],
+  },
+  {
+    name: '深海の谷',
+    rounds: [
+      ['mermaid', 'slime', 'mermaid'],
+      ['turtle', 'mermaid', 'slime'],
+      ['mermaid', 'turtle', 'mermaid'],
+      ['deepDragon'],
+    ],
+  },
+  {
+    name: '古の遺跡',
+    rounds: [
+      ['ghost', 'ghost', 'fabit'],
+      ['ghost', 'mushroom', 'mushroom'],
+      ['ghost', 'turtle', 'sandGolem'],
+      ['golem', 'rockGolem'],
+    ],
+  },
+  {
+    name: '神々の塔',
+    rounds: [
+      ['ghost', 'fabit', 'mushroom'],
+      ['boarBlue', 'mermaid', 'turtle'],
+      ['dragon', 'kingDrag'],
+      ['rockGolem', 'sandGolem'],
+      ['demonKing'],
     ],
   },
 ];
@@ -1194,7 +1238,7 @@ const UR_VARIANTS = {
   ],
 };
 
-const BOSS_TYPES = new Set(['dragon', 'kingDrag', 'golem', 'rockGolem']);
+const BOSS_TYPES = new Set(['dragon', 'kingDrag', 'golem', 'rockGolem', 'sandGolem', 'deepDragon', 'demonKing']);
 function isBoss(e) { return e && BOSS_TYPES.has(e.type); }
 
 function getItemIconId(item) {
@@ -2534,6 +2578,9 @@ function drawEnemy(e) {
     case 'dragon': drawDragon(cx, cy, c, a); break;
     case 'kingDrag': drawDragon(cx, cy, c, a); break;
     case 'goldDragonBonus': drawDragon(cx, cy, c, a); break;
+    case 'deepDragon': drawDragon(cx, cy, c, a); break;
+    case 'demonKing': drawDragon(cx, cy, c, a); break;
+    case 'sandGolem': drawGolem(cx, cy, c, a); break;
     case 'golem': drawGolem(cx, cy, c, a); break;
     case 'rockGolem': drawGolem(cx, cy, c, a); break;
   }
