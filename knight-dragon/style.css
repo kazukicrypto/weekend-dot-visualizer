@@ -14,9 +14,11 @@ html, body {
 #app {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   min-height: 100vh;
   padding: 4px;
+  padding-bottom: env(safe-area-inset-bottom, 4px);
+  padding-top: env(safe-area-inset-top, 4px);
   gap: 0;
   max-width: 480px;
   margin: 0 auto;
@@ -146,17 +148,19 @@ html, body {
   100% { transform: scale(1) rotate(0); opacity: 1; }
 }
 
-/* ===== HUD - wood theme ===== */
+/* ===== HUD - wood theme, fills remaining viewport ===== */
 #hud {
   width: 100%;
   background: linear-gradient(180deg, #5a3d20 0%, #3a2410 100%);
   border: 2px solid #2a1a08;
   border-top: 3px solid #8b6940;
   border-radius: 0 0 6px 6px;
-  padding: 6px;
+  padding: 8px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-height: 280px;
 }
 
 /* ===== Bars ===== */
@@ -232,12 +236,14 @@ html, body {
   transition: width 0.15s;
 }
 
-/* ===== Combat grid: 4 columns x 3 rows ===== */
+/* ===== Combat grid: 4 columns x 3 rows, fills HUD ===== */
 #combat-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 60px;
-  grid-template-rows: 32px 60px 38px;
-  gap: 3px;
+  grid-template-columns: 1fr 1fr 1fr 64px;
+  grid-template-rows: minmax(40px, 1fr) minmax(80px, 2.4fr) minmax(54px, 1.5fr);
+  gap: 4px;
+  flex: 1 1 auto;
+  min-height: 230px;
 }
 
 /* Equipment slot (row 1) */
@@ -245,12 +251,11 @@ html, body {
   background: #2a1a08;
   border: 2px solid #8b6940;
   border-radius: 4px;
-  height: 32px;
-  padding: 0 4px;
+  padding: 0 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 5px;
   position: relative;
 }
 
@@ -271,21 +276,21 @@ html, body {
 }
 
 .eq-icon {
-  width: 14px;
-  height: 21px;
+  width: 20px;
+  height: 28px;
   flex-shrink: 0;
   shape-rendering: crispEdges;
 }
 
 .eq-name {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: bold;
   color: #ffe8b0;
   text-shadow: 1px 1px 0 #000;
 }
 
 .eq-plus {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: bold;
   color: #ffd066;
   text-shadow: 1px 1px 0 #000;
@@ -294,10 +299,10 @@ html, body {
 /* ===== Current move button (row 2) ===== */
 .current-btn {
   font-family: inherit;
-  background: linear-gradient(180deg, #f0d8b0 0%, #b08850 100%);
+  background: linear-gradient(180deg, #f6e4be 0%, #b88e58 100%);
   border: 2px solid #8b6940;
-  border-radius: 5px;
-  padding: 2px;
+  border-radius: 6px;
+  padding: 4px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -305,10 +310,11 @@ html, body {
   justify-content: center;
   cursor: pointer;
   color: #3a2410;
-  height: 60px;
+  height: 100%;
   position: relative;
   touch-action: manipulation;
   transition: transform 0.05s;
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,0.15);
 }
 
 .current-btn:active:not(:disabled) { transform: scale(0.96); }
@@ -320,38 +326,38 @@ html, body {
 
 .ap-cost {
   position: absolute;
-  top: -2px;
-  left: -2px;
+  top: -4px;
+  left: -4px;
   background: #d22020;
   color: #fff;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 900;
-  width: 20px;
-  height: 20px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 2px solid #fff;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  box-shadow: 0 2px 3px rgba(0,0,0,0.6);
   z-index: 2;
 }
 
 .move-icon {
-  width: 22px;
-  height: 30px;
+  width: 32px;
+  height: 44px;
   shape-rendering: crispEdges;
   filter: drop-shadow(1px 2px 0 rgba(0,0,0,0.5));
 }
 
 .cell-name {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: bold;
   color: #3a2410;
   text-shadow: 1px 1px 0 rgba(255,255,255,0.4);
   text-align: center;
   line-height: 1;
-  margin-top: 2px;
+  margin-top: 4px;
   padding: 0 2px;
   white-space: nowrap;
   overflow: hidden;
@@ -364,12 +370,12 @@ html, body {
   background: linear-gradient(180deg, #3a3a40 0%, #18181c 100%);
   border: 1px solid #555;
   border-radius: 4px;
-  padding: 0 4px;
+  padding: 0 6px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 3px;
-  height: 38px;
+  gap: 4px;
+  height: 100%;
   position: relative;
   overflow: hidden;
 }
@@ -377,9 +383,9 @@ html, body {
 .next-tag {
   background: #d22020;
   color: #fff;
-  padding: 1px 4px;
+  padding: 2px 5px;
   border-radius: 2px;
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.5px;
   font-weight: bold;
   flex-shrink: 0;
@@ -388,21 +394,21 @@ html, body {
 .next-ap {
   background: #888;
   color: #fff;
-  width: 15px;
-  height: 15px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: bold;
   flex-shrink: 0;
-  border: 1px solid #ccc;
+  border: 1.5px solid #ccc;
 }
 
 .next-icon {
-  width: 14px;
-  height: 20px;
+  width: 18px;
+  height: 26px;
   flex-shrink: 0;
   shape-rendering: crispEdges;
   filter: grayscale(0.3) brightness(0.85);
@@ -410,7 +416,7 @@ html, body {
 
 .next-name {
   flex: 1;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: bold;
   color: #ddd;
   white-space: nowrap;
@@ -437,7 +443,7 @@ html, body {
   position: relative;
   touch-action: manipulation;
   transition: transform 0.05s;
-  min-height: 36px;
+  height: 100%;
 }
 
 .side-btn:active:not(:disabled) { transform: scale(0.96); }
@@ -446,9 +452,9 @@ html, body {
 .shield-btn { background: linear-gradient(180deg, #4a6b95 0%, #243a5a 100%); }
 .meat-btn   { background: linear-gradient(180deg, #d2a050 0%, #8b6030 100%); }
 
-.side-icon { font-size: 18px; line-height: 1; }
-.side-label { font-size: 9px; font-weight: bold; letter-spacing: 1px; margin-top: 1px; text-shadow: 1px 1px 0 #000; }
-.side-count { position: absolute; bottom: 1px; right: 4px; font-size: 10px; font-weight: bold; text-shadow: 1px 1px 0 #000; }
+.side-icon { font-size: 26px; line-height: 1; }
+.side-label { font-size: 11px; font-weight: bold; letter-spacing: 1px; margin-top: 3px; text-shadow: 1px 1px 0 #000; }
+.side-count { position: absolute; bottom: 2px; right: 5px; font-size: 12px; font-weight: bold; text-shadow: 1px 1px 0 #000; }
 
 /* Level pill in HP row */
 .lv-pill {
