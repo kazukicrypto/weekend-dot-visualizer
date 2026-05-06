@@ -651,20 +651,28 @@ function attack(weaponKey) {
 
   const equipped = getEquippedItem(weaponKey);
   const enchant = (equipped ? equipped.plus : 0) * 0.08;
+  // Per-weapon rarity bonuses
+  const dmgBonus  = (weaponKey === 'sword')  ? getEffect('sword',  'dmgBonus')  : 0;
+  const critBonus = (weaponKey === 'sword')  ? getEffect('sword',  'critBonus') : 0;
+  const ppBonus   = (weaponKey === 'spear')  ? getEffect('spear',  'ppBonus')   : 0;
+  const aoeBonus  = (weaponKey === 'hammer' && move.aoe) ? getEffect('hammer', 'aoeBonus') : 0;
+  const stunBonus = getEffect('hammer', 'stunBonus'); // passive: extends PIYO duration
+
   for (const target of targets) {
     const isWeak = target.weak === weaponKey;
-    const crit = target.stunned;
-    const mult = (isWeak ? 1.4 : 1.0) * (crit ? 1.6 : 1) * (1 + enchant);
+    const luckyCrit = !target.stunned && critBonus > 0 && Math.random() < critBonus;
+    const crit = target.stunned || luckyCrit;
+    const mult = (isWeak ? 1.4 : 1.0) * (crit ? 1.6 : 1) * (1 + enchant) * (1 + dmgBonus + aoeBonus);
     const dmg = Math.round(move.dmg * mult);
     target.hp = Math.max(0, target.hp - dmg);
     target.hitTimer = 0.3;
 
     if (!target.stunned) {
-      target.pp += move.pp * (isWeak ? 2.6 : 1);
+      target.pp += move.pp * (isWeak ? 2.6 : 1) * (1 + ppBonus);
       if (target.pp >= target.maxPp) {
         target.pp = target.maxPp;
         target.stunned = true;
-        target.stunTimer = 4;
+        target.stunTimer = 4 * (1 + stunBonus);
         target.attackTimer = 999;
         sound.piyo();
         addFloat('PIYO!!', target.x, target.y - 60, '#ffeb3b', 1.2, 24);
@@ -674,7 +682,8 @@ function attack(weaponKey) {
     }
 
     let label = '';
-    if (crit) label = 'CRIT! ';
+    if (crit && luckyCrit) label = 'CRIT★ ';
+    else if (crit) label = 'CRIT! ';
     else if (isWeak) label = 'WEAK! ';
     addFloat(label + dmg, target.x + (Math.random() * 20 - 10), target.y - 30, crit ? '#ff5252' : (isWeak ? '#ffd066' : '#ffffff'), 0.85);
 
@@ -758,8 +767,11 @@ function tryGuard() {
   const k = state.knight;
   state.shieldUntil = state.time + 0.35;
 
+  const guardWindow = getEffect('shield', 'guardWindow');
+  const defBonus = getEffect('shield', 'defBonus');
+
   const incoming = nextAttacker();
-  if (!incoming || incoming.attackTimer > 0.7) {
+  if (!incoming || incoming.attackTimer > 0.7 + guardWindow * 0.5) {
     addFloat('早い!', k.x, k.y - 60, '#aaa', 0.6, 16);
     sound.early();
     return;
@@ -767,11 +779,12 @@ function tryGuard() {
 
   const t = incoming.attackTimer;
   let kind, dmgMult, apGain = 0, hpGain = 0, color = '#80c0ff';
-  if (t < 0.07)      { kind = 'MIRACLE'; dmgMult = 0;   apGain = 2; hpGain = 18; color = '#ff80ff'; }
-  else if (t < 0.20) { kind = 'JUST';    dmgMult = 0.1; apGain = 1; color = '#ffeb3b'; }
-  else               { kind = 'GUARD';   dmgMult = 0.4; color = '#80c0ff'; }
+  if (t < 0.07 + guardWindow)        { kind = 'MIRACLE'; dmgMult = 0;   apGain = 2; hpGain = 18; color = '#ff80ff'; }
+  else if (t < 0.20 + guardWindow)   { kind = 'JUST';    dmgMult = 0.1; apGain = 1; color = '#ffeb3b'; }
+  else                               { kind = 'GUARD';   dmgMult = 0.4; color = '#80c0ff'; }
 
-  const dmg = Math.round(incoming.atkDmg * dmgMult);
+  const atkDmg = (incoming.pendingAtk && incoming.pendingAtk.dmg) || incoming.atkDmg;
+  const dmg = Math.round(atkDmg * dmgMult * (1 - defBonus));
   k.hp = Math.max(0, k.hp - dmg);
   k.hp = Math.min(k.maxHp, k.hp + hpGain);
   k.ap = Math.min(k.maxAp, k.ap + apGain);
@@ -831,14 +844,16 @@ function cycleTarget() {
 function onEnemyAttackLand(e) {
   const k = state.knight;
   const atk = e.pendingAtk || { name: '攻撃', dmg: e.atkDmg };
-  k.hp = Math.max(0, k.hp - atk.dmg);
+  const defBonus = getEffect('shield', 'defBonus');
+  const finalDmg = Math.max(1, Math.round(atk.dmg * (1 - defBonus)));
+  k.hp = Math.max(0, k.hp - finalDmg);
   k.hitTimer = 0.3;
   shake = Math.min(12, shake + (atk.dmg > e.atkDmg ? 12 : 8));
   sound.enemyAtk();
   if (atk.name && atk.name !== '攻撃') {
     addFloat(atk.name + '!', e.x, e.y - 60, '#ff80b0', 1.0, 18);
   }
-  addFloat(`-${atk.dmg}`, k.x, k.y - 30, '#ff6b6b', 0.85);
+  addFloat(`-${finalDmg}`, k.x, k.y - 30, '#ff6b6b', 0.85);
   rollEnemyAttack(e);
   state.hitCombo = 0;
   if (k.hp <= 0) onDefeat();
@@ -890,6 +905,70 @@ function onStageClear() {
 const RARITY_RANK = { common: 0, r: 1, sr: 2, ur: 3 };
 const RARITY_COLOR = { common: '#dddddd', r: '#5fb0e8', sr: '#d090ff', ur: '#ffd066' };
 const RARITY_LABEL = { common: 'コモン', r: 'レア', sr: 'SR', ur: 'UR' };
+
+// Per-type rarity effects (multipliers / additive bonuses).
+// Higher rarity → bigger numbers + new bonuses unlock at SR / UR.
+const ITEM_EFFECTS = {
+  sword: {
+    common: { dmgBonus: 0,    critBonus: 0    },
+    r:      { dmgBonus: 0.05, critBonus: 0.05 },
+    sr:     { dmgBonus: 0.12, critBonus: 0.12 },
+    ur:     { dmgBonus: 0.22, critBonus: 0.22 },
+  },
+  spear: {
+    common: { apRegenBonus: 0,    ppBonus: 0    },
+    r:      { apRegenBonus: 0.10, ppBonus: 0.08 },
+    sr:     { apRegenBonus: 0.22, ppBonus: 0.18 },
+    ur:     { apRegenBonus: 0.40, ppBonus: 0.32 },
+  },
+  hammer: {
+    common: { aoeBonus: 0,    stunBonus: 0    },
+    r:      { aoeBonus: 0.10, stunBonus: 0.15 },
+    sr:     { aoeBonus: 0.22, stunBonus: 0.32 },
+    ur:     { aoeBonus: 0.40, stunBonus: 0.55 },
+  },
+  shield: {
+    common: { defBonus: 0,    guardWindow: 0    },
+    r:      { defBonus: 0.08, guardWindow: 0.04 },
+    sr:     { defBonus: 0.18, guardWindow: 0.08 },
+    ur:     { defBonus: 0.30, guardWindow: 0.14 },
+  },
+};
+
+function getRarityEff(type, rarity, key) {
+  const t = ITEM_EFFECTS[type];
+  if (!t) return 0;
+  const r = t[rarity];
+  if (!r) return 0;
+  return r[key] || 0;
+}
+
+function getEffect(type, key) {
+  const item = getEquippedItem(type);
+  if (!item) return 0;
+  return getRarityEff(type, item.rarity, key);
+}
+
+function describeItemEffects(item) {
+  if (!item) return [];
+  const eff = (ITEM_EFFECTS[item.type] && ITEM_EFFECTS[item.type][item.rarity]) || {};
+  const lines = [];
+  if (item.type === 'sword') {
+    if (eff.dmgBonus)  lines.push({ label: '攻撃力',   value: `+${Math.round(eff.dmgBonus * 100)}%` });
+    if (eff.critBonus) lines.push({ label: '会心率',   value: `+${Math.round(eff.critBonus * 100)}%` });
+  } else if (item.type === 'spear') {
+    if (eff.apRegenBonus) lines.push({ label: 'AP回復',  value: `+${Math.round(eff.apRegenBonus * 100)}%` });
+    if (eff.ppBonus)      lines.push({ label: 'PP蓄積',  value: `+${Math.round(eff.ppBonus * 100)}%` });
+  } else if (item.type === 'hammer') {
+    if (eff.aoeBonus)  lines.push({ label: 'AOE威力', value: `+${Math.round(eff.aoeBonus * 100)}%` });
+    if (eff.stunBonus) lines.push({ label: 'PIYO時間', value: `+${Math.round(eff.stunBonus * 100)}%` });
+  } else if (item.type === 'shield') {
+    if (eff.defBonus)    lines.push({ label: '被ダメ軽減', value: `${Math.round(eff.defBonus * 100)}%` });
+    if (eff.guardWindow) lines.push({ label: 'ガード猶予', value: `+${Math.round(eff.guardWindow * 1000)}ms` });
+  }
+  if (item.plus) lines.push({ label: '強化', value: `+${item.plus} 装備` });
+  return lines;
+}
 
 function rollDrop(forceHigh) {
   const r = Math.random();
@@ -1007,13 +1086,22 @@ function renderEquippedGrid() {
     const card = document.createElement('div');
     const rarity = item ? item.rarity : 'common';
     card.className = `equip-card rarity-${rarity}`;
+    const effLines = item ? describeItemEffects(item) : [];
+    const effHtml = effLines.length
+      ? `<div class="equip-effects">${effLines.map(l =>
+          `<div class="eff-row"><span class="eff-label">${l.label}</span><span class="eff-value">${l.value}</span></div>`
+        ).join('')}</div>`
+      : '<div class="equip-effects empty">効果なし</div>';
     card.innerHTML = `
-      <svg class="equip-icon"><use href="#ico-${t}"/></svg>
-      <div class="equip-meta">
-        <div class="equip-slot-label">${TYPE_NAMES[t]}</div>
-        <div class="equip-name">${item ? (item.name || itemName(t, item.rarity)) : '未装備'}</div>
-        ${item ? `<div class="equip-stats"><span class="rarity-tag">${RARITY_LABEL[item.rarity]}</span><span class="plus-tag">+${item.plus}</span></div>` : ''}
+      <div class="equip-head">
+        <svg class="equip-icon"><use href="#ico-${t}"/></svg>
+        <div class="equip-meta">
+          <div class="equip-slot-label">${TYPE_NAMES[t]}</div>
+          <div class="equip-name">${item ? (item.name || itemName(t, item.rarity)) : '未装備'}</div>
+          ${item ? `<div class="equip-stats"><span class="rarity-tag">${RARITY_LABEL[item.rarity]}</span><span class="plus-tag">+${item.plus}</span></div>` : ''}
+        </div>
       </div>
+      ${effHtml}
     `;
     grid.appendChild(card);
   }
@@ -1516,7 +1604,10 @@ function update(dt) {
     k.attackAnim -= dt;
     if (k.attackAnim <= 0) k.attackWeapon = null;
   }
-  if (k.ap < k.maxAp) k.ap = Math.min(k.maxAp, k.ap + k.apRegen * dt);
+  if (k.ap < k.maxAp) {
+    const apRegenBonus = getEffect('spear', 'apRegenBonus');
+    k.ap = Math.min(k.maxAp, k.ap + k.apRegen * (1 + apRegenBonus) * dt);
+  }
 
   for (const e of state.enemies) {
     if (e.hp <= 0) continue;
@@ -2651,6 +2742,13 @@ function bindUi() {
     else if (ev.code === 'KeyT' || ev.code === 'Tab') { ev.preventDefault(); cycleTarget(); }
   });
 }
+
+function updateVhVariable() {
+  document.documentElement.style.setProperty('--vh', window.innerHeight + 'px');
+}
+updateVhVariable();
+window.addEventListener('resize', updateVhVariable);
+window.addEventListener('orientationchange', updateVhVariable);
 
 injectWeaponIcons();
 resetState();
