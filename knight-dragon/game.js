@@ -144,6 +144,54 @@ const WEAPONS = {
   hammer: { name: 'ハンマー', icon: '🔨', color: '#cc8855', moves: ['hm_swing', 'hm_smash', 'hm_geki'] },
 };
 
+// ============================================================
+// PIXEL ART WEAPON ICONS (SVG)
+// ============================================================
+const WEAPON_SVG = {
+  sword: `<svg viewBox="0 0 16 24" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+    <rect x="7" y="2" width="2" height="13" fill="#e8f8ff"/>
+    <rect x="7" y="2" width="1" height="13" fill="#7be0ff"/>
+    <rect x="7" y="14" width="2" height="2" fill="#9adde8"/>
+    <rect x="3" y="15" width="10" height="2" fill="#a8a8a8"/>
+    <rect x="3" y="15" width="10" height="1" fill="#dddddd"/>
+    <rect x="2" y="15" width="1" height="2" fill="#666"/>
+    <rect x="13" y="15" width="1" height="2" fill="#666"/>
+    <rect x="7" y="17" width="2" height="4" fill="#a5621a"/>
+    <rect x="6" y="21" width="4" height="2" fill="#d4a040"/>
+  </svg>`,
+  spear: `<svg viewBox="0 0 16 24" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+    <rect x="7" y="1" width="2" height="2" fill="#fff8c0"/>
+    <rect x="6" y="3" width="4" height="1" fill="#fff8c0"/>
+    <rect x="6" y="4" width="4" height="1" fill="#ffe080"/>
+    <rect x="5" y="5" width="6" height="1" fill="#ffe080"/>
+    <rect x="5" y="6" width="6" height="1" fill="#ffd066"/>
+    <rect x="6" y="7" width="4" height="1" fill="#ffd066"/>
+    <rect x="6" y="8" width="4" height="1" fill="#d8a040"/>
+    <rect x="7" y="9" width="2" height="2" fill="#a87020"/>
+    <rect x="7" y="11" width="2" height="11" fill="#a5621a"/>
+    <rect x="6" y="13" width="4" height="1" fill="#ffd066"/>
+    <rect x="6" y="20" width="4" height="1" fill="#ffd066"/>
+  </svg>`,
+  hammer: `<svg viewBox="0 0 16 24" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+    <rect x="2" y="3" width="12" height="2" fill="#e0a070"/>
+    <rect x="2" y="5" width="12" height="5" fill="#cc8855"/>
+    <rect x="2" y="10" width="12" height="2" fill="#a06030"/>
+    <rect x="3" y="3" width="1" height="9" fill="#a06030"/>
+    <rect x="12" y="3" width="1" height="9" fill="#a06030"/>
+    <rect x="6" y="6" width="4" height="3" fill="#e0a070"/>
+    <rect x="7" y="12" width="2" height="10" fill="#a5621a"/>
+    <rect x="6" y="13" width="4" height="1" fill="#ffd066"/>
+    <rect x="6" y="20" width="4" height="1" fill="#ffd066"/>
+  </svg>`,
+};
+
+function injectWeaponIcons() {
+  for (const el of document.querySelectorAll('[data-icon]')) {
+    const key = el.dataset.icon;
+    if (WEAPON_SVG[key]) el.innerHTML = WEAPON_SVG[key];
+  }
+}
+
 const ENEMIES = {
   ghost:    { name: 'ゴースト',     hp: 50,  weak: 'sword',  atkDmg: 9,  atk: [2.0, 3.0], color: '#c8d0ff', accent: '#fff', size: 0.9 },
   slime:    { name: 'スライム',     hp: 40,  weak: 'spear',  atkDmg: 7,  atk: [1.4, 2.4], color: '#5cf',    accent: '#fff', size: 0.8 },
@@ -1357,6 +1405,7 @@ function bindUi() {
   });
 }
 
+injectWeaponIcons();
 resetState();
 bindUi();
 requestAnimationFrame(loop);
