@@ -1675,6 +1675,89 @@ function px(x, y, c, w = 4, h = 4) {
   ctx.fillRect(Math.round(x), Math.round(y), w, h);
 }
 
+// Sprite-string drawing helper
+function drawSprite(rows, palette, ox, oy, scale = 3, flash = false) {
+  for (let py = 0; py < rows.length; py++) {
+    const row = rows[py];
+    for (let pxi = 0; pxi < row.length; pxi++) {
+      const c = row[pxi];
+      if (c === '.' || c === ' ') continue;
+      const color = flash ? '#ffffff' : (palette[c] || '#f0f');
+      ctx.fillStyle = color;
+      ctx.fillRect(Math.round(ox + pxi * scale), Math.round(oy + py * scale), scale, scale);
+    }
+  }
+}
+
+const KNIGHT_PAL = {
+  H: '#ffe060',  // hair light
+  h: '#d49b1c',  // hair shadow
+  S: '#ffe1bc',  // skin
+  s: '#d4a482',  // skin shadow
+  E: '#1a1a1a',  // eye
+  m: '#202028',  // outline / dark
+  C: '#c83030',  // cape red
+  c: '#7a1a1a',  // cape dark
+  B: '#3068b8',  // tunic blue
+  b: '#1a3a78',  // tunic dark
+  G: '#ffd066',  // gold trim
+  L: '#704020',  // leather
+  l: '#3a2010',  // leather dark
+  K: '#202830',  // boots
+  W: '#f0f0f0',  // white highlights
+  P: '#fef9d8',  // pale highlight
+};
+
+const KNIGHT_IDLE = [
+  '....hHHh....',
+  '...HHHHHh...',
+  '..HHHHHHHh..',
+  '.hHHHHHHHHh.',
+  '.hHHsSSSHHh.',
+  '..hSEsSEsh..',
+  '..sSSSSSSs..',
+  '...sSSSSs...',
+  '....sssss...',
+  '...CmCCCmC..',
+  '..CcmBBBmcC.',
+  '.CcmBBGBBmcC',
+  '.CcmBBGBBmcC',
+  '.CcmBBBBBmcC',
+  '..mLLLLLLm..',
+  '..mLLGGLLm..',
+  '..mLLLLLLm..',
+  '...BBb.bBB..',
+  '...BBb.bBB..',
+  '...BBb.bBB..',
+  '...KKm.mKK..',
+  '...KKm.mKK..',
+];
+
+const KNIGHT_ATTACK = [
+  '....hHHh....',
+  '...HHHHHh...',
+  '..HHHHHHHh..',
+  '.hHHHHHHHHh.',
+  '.hHHsSSSHHh.',
+  '..hSESEEsh..',
+  '..sSSSSSSs..',
+  '...sssMMs...',
+  '....ssMMM...',
+  '...CmCCCmC..',
+  '..CcmBBBmcC.',
+  '.CcmBBGBBmcC',
+  '.CcmBBGBBmcC',
+  '..mBBBBBBm..',
+  '..mLLLLLLm..',
+  '..mLLGGLLm..',
+  '..mLLLLLLm..',
+  '..BBb..bBB..',
+  '..BBb..bBB..',
+  '..BBb..bBB..',
+  '..KKm..mKK..',
+  '..KKm..mKK..',
+];
+
 function drawKnight(k) {
   const flash = k.hitTimer > 0 && Math.floor(k.hitTimer * 20) % 2 === 0;
   const guardUp = state.time < state.shieldUntil;
@@ -1689,7 +1772,6 @@ function drawKnight(k) {
     } else if (k.attackWeapon === 'spear') {
       lungeX = Math.sin(atkPhase * Math.PI) * 26;
     } else if (k.attackWeapon === 'hammer') {
-      // Wind-up back, then forward smash
       lungeX = atkPhase < 0.5 ? -atkPhase * 14 : (atkPhase - 0.5) * 30;
       lungeY = atkPhase < 0.5 ? -atkPhase * 6 : 0;
     }
@@ -1698,71 +1780,39 @@ function drawKnight(k) {
   const idleBob = Math.sin(state.time * 2.5) * 1;
   const x = k.x + lungeX;
   const y = k.y + idleBob + lungeY;
+  const scale = 3;
 
   // Shadow
   ctx.fillStyle = 'rgba(0,0,0,0.4)';
   ctx.beginPath();
-  ctx.ellipse(x, y + 50, 30, 7, 0, 0, Math.PI * 2);
+  ctx.ellipse(x, y + 36, 26, 6, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  const skin = flash ? '#fff' : '#ffd9b3';
-  const armor = flash ? '#fff' : '#4080d0';
-  const armorDark = flash ? '#fff' : '#264a78';
-  const metal = flash ? '#fff' : '#c8cfd6';
-  const metalDark = flash ? '#fff' : '#7a8088';
-  const hair = flash ? '#fff' : '#ffd84a';
+  // Sprite (12x22 grid at scale 3 → 36x66 px). Anchor: x=center, y=feet
+  const sprite = (k.attackAnim > 0) ? KNIGHT_ATTACK : KNIGHT_IDLE;
+  const sw = 12 * scale;  // 36
+  const sh = 22 * scale;  // 66
+  drawSprite(sprite, KNIGHT_PAL, x - sw / 2, y - sh + 4, scale, flash);
 
-  // Hair (puffy)
-  px(x - 14, y - 56, hair, 28, 6);
-  px(x - 16, y - 60, hair, 8, 6);
-  px(x + 8, y - 60, hair, 8, 6);
-  px(x - 6, y - 64, hair, 12, 6);
-
-  // Helmet/face frame
-  px(x - 16, y - 50, metal, 32, 4);
-  px(x - 18, y - 46, metal, 4, 8);
-  px(x + 14, y - 46, metal, 4, 8);
-
-  // Face
-  px(x - 12, y - 46, skin, 24, 14);
-  px(x - 8, y - 42, '#222', 4, 4);
-  px(x + 4, y - 42, '#222', 4, 4);
-  px(x - 4, y - 34, '#c00', 8, 2);
-
-  // Body armor (blue)
-  px(x - 18, y - 32, armor, 36, 28);
-  px(x - 22, y - 28, armor, 8, 22);
-  px(x + 14, y - 28, armor, 8, 22);
-  px(x - 14, y - 28, armorDark, 28, 4);
-  px(x - 4, y - 22, '#ffd066', 8, 8); // chest emblem
-
-  // Cape (red, behind)
-  ctx.fillStyle = flash ? '#fff' : '#a02828';
-  ctx.fillRect(Math.round(x - 22), Math.round(y - 32), 6, 36);
-  ctx.fillRect(Math.round(x - 24), Math.round(y - 28), 4, 28);
-
-  // Legs
-  px(x - 14, y, armorDark, 12, 22);
-  px(x + 2, y, armorDark, 12, 22);
-  px(x - 14, y + 22, '#3a4050', 12, 6);
-  px(x + 2, y + 22, '#3a4050', 12, 6);
-
+  // Shield held up when guarding
   if (guardUp) {
-    const sy = y - 18 + Math.sin(state.time * 30) * 1;
-    // Shield (round, on left arm)
-    px(x - 38, sy - 14, '#4a90e0', 14, 32);
-    px(x - 36, sy - 10, '#80c0ff', 8, 24);
-    px(x - 34, sy - 6, '#ffd700', 4, 6);
+    const sy = y - 30 + Math.sin(state.time * 30) * 1;
+    // Pixel shield on left
+    px(x - 26, sy - 12, '#4a90e0', 14, 32);
+    px(x - 24, sy - 8, '#80c0ff', 10, 24);
+    px(x - 22, sy - 4, '#ffd700', 6, 6);
     ctx.strokeStyle = `rgba(180,220,255,${0.4 + Math.random() * 0.3})`;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(x - 32, sy + 2, 28, 0, Math.PI * 2);
+    ctx.arc(x - 19, sy + 2, 24, 0, Math.PI * 2);
     ctx.stroke();
   } else {
-    // Sword on right
-    px(x + 22, y - 36, metal, 4, 36);
-    px(x + 18, y - 40, metalDark, 12, 4);
-    px(x + 20, y - 4, '#806030', 8, 6);
+    // Sword in hand on right side (idle)
+    px(x + 18, y - 50, '#c8cfd6', 4, 30);
+    px(x + 19, y - 50, '#fff', 2, 30);
+    px(x + 14, y - 22, '#7a8088', 12, 4);
+    px(x + 18, y - 16, '#704020', 4, 8);
+    px(x + 16, y - 10, '#ffd066', 8, 4);
   }
 
   // Per-weapon slash effect
@@ -2108,53 +2158,130 @@ function drawTurtle(cx, cy, c, a) {
 }
 
 function drawDragon(cx, cy, c, a) {
-  // Wings
-  px(cx - 28, cy - 22, a, 18, 26);
-  px(cx + 10, cy - 22, a, 18, 26);
-  px(cx - 32, cy - 16, a, 6, 18);
-  px(cx + 26, cy - 16, a, 6, 18);
+  const dark = shadeColor(c, -30);
+  // Tail (curled)
+  px(cx - 28, cy + 6, c, 6, 10);
+  px(cx - 32, cy + 2, c, 6, 10);
+  px(cx - 30, cy - 4, c, 4, 8);
+  px(cx - 26, cy - 4, dark, 2, 8);
+  // Wings (back)
+  px(cx - 30, cy - 28, a, 22, 32);
+  px(cx + 8, cy - 28, a, 22, 32);
+  px(cx - 34, cy - 20, a, 8, 22);
+  px(cx + 26, cy - 20, a, 8, 22);
+  // Wing membrane lines
+  px(cx - 26, cy - 24, dark, 2, 26);
+  px(cx - 18, cy - 22, dark, 2, 22);
+  px(cx + 18, cy - 22, dark, 2, 22);
+  px(cx + 26, cy - 24, dark, 2, 26);
   // Body
-  px(cx - 16, cy - 30, c, 32, 50);
-  px(cx - 20, cy - 24, c, 40, 40);
+  px(cx - 18, cy - 32, c, 36, 52);
+  px(cx - 22, cy - 26, c, 44, 42);
+  px(cx - 24, cy - 16, c, 48, 28);
+  // Belly scales
+  px(cx - 12, cy - 8, a, 24, 20);
+  px(cx - 10, cy - 4, dark, 2, 16);
+  px(cx - 4, cy - 4, dark, 2, 16);
+  px(cx + 2, cy - 4, dark, 2, 16);
+  px(cx + 8, cy - 4, dark, 2, 16);
   // Head
-  px(cx - 10, cy - 44, c, 22, 18);
-  px(cx - 14, cy - 40, c, 6, 12);
-  px(cx + 12, cy - 40, c, 6, 12);
+  px(cx - 12, cy - 48, c, 24, 18);
+  px(cx - 16, cy - 44, c, 6, 14);
+  px(cx + 10, cy - 44, c, 6, 14);
+  px(cx + 14, cy - 38, c, 4, 8);
   // Horns
-  px(cx + 6, cy - 50, c, 4, 8);
-  px(cx - 6, cy - 50, c, 4, 8);
-  // Eyes
-  px(cx - 6, cy - 36, '#ff0', 4, 4);
-  px(cx + 4, cy - 36, '#ff0', 4, 4);
-  px(cx - 5, cy - 34, '#000', 2, 2);
-  px(cx + 5, cy - 34, '#000', 2, 2);
-  // Mouth
-  px(cx - 4, cy - 26, '#600', 8, 4);
-  px(cx - 6, cy - 26, '#fff', 2, 3);
-  px(cx + 4, cy - 26, '#fff', 2, 3);
-  // Belly
-  px(cx - 10, cy - 8, a, 20, 16);
-  // Legs
-  px(cx - 12, cy + 14, c, 10, 12);
-  px(cx + 2, cy + 14, c, 10, 12);
+  px(cx - 10, cy - 56, c, 4, 8);
+  px(cx + 6, cy - 56, c, 4, 8);
+  px(cx - 9, cy - 60, dark, 2, 4);
+  px(cx + 7, cy - 60, dark, 2, 4);
+  // Crest spikes (back of head)
+  px(cx - 4, cy - 56, c, 8, 4);
+  px(cx - 2, cy - 60, c, 4, 4);
+  // Eyes (glowing)
+  px(cx - 8, cy - 40, '#fff', 4, 4);
+  px(cx + 4, cy - 40, '#fff', 4, 4);
+  px(cx - 7, cy - 39, '#fc0', 2, 2);
+  px(cx + 5, cy - 39, '#fc0', 2, 2);
+  px(cx - 7, cy - 38, '#a00', 2, 1);
+  px(cx + 5, cy - 38, '#a00', 2, 1);
+  // Snout / nostrils
+  px(cx - 2, cy - 32, dark, 4, 2);
+  px(cx - 4, cy - 28, '#600', 8, 4);
+  // Fangs
+  px(cx - 4, cy - 26, '#fff', 2, 3);
+  px(cx + 2, cy - 26, '#fff', 2, 3);
+  // Front arms with claws
+  px(cx - 26, cy - 8, c, 8, 16);
+  px(cx + 18, cy - 8, c, 8, 16);
+  px(cx - 26, cy + 6, '#fff', 2, 4);
+  px(cx - 22, cy + 6, '#fff', 2, 4);
+  px(cx + 20, cy + 6, '#fff', 2, 4);
+  px(cx + 24, cy + 6, '#fff', 2, 4);
+  // Hind legs
+  px(cx - 14, cy + 14, c, 12, 14);
+  px(cx + 2, cy + 14, c, 12, 14);
+  px(cx - 14, cy + 26, dark, 12, 4);
+  px(cx + 2, cy + 26, dark, 12, 4);
 }
 
 function drawGolem(cx, cy, c, a) {
-  // Head
-  px(cx - 14, cy - 38, c, 28, 22);
-  px(cx - 8, cy - 30, '#f00', 4, 4);
-  px(cx + 4, cy - 30, '#f00', 4, 4);
-  px(cx - 8, cy - 22, a, 16, 3);
-  // Body
+  const dark = shadeColor(c, -30);
+  const light = shadeColor(c, 20);
+  // Shoulders/upper body
+  px(cx - 26, cy - 18, dark, 52, 6);
   px(cx - 22, cy - 14, c, 44, 36);
-  px(cx - 30, cy - 10, c, 12, 28);
-  px(cx + 18, cy - 10, c, 12, 28);
-  // Cracks
-  px(cx - 14, cy - 6, a, 28, 3);
-  px(cx - 8, cy + 4, a, 4, 8);
+  // Body chest
+  px(cx - 18, cy - 12, light, 36, 22);
+  // Cracks across body
+  px(cx - 14, cy - 6, dark, 28, 2);
+  px(cx - 6, cy - 12, dark, 2, 12);
+  px(cx + 4, cy - 4, dark, 2, 10);
+  // Head (carved stone)
+  px(cx - 16, cy - 40, c, 32, 24);
+  px(cx - 14, cy - 38, light, 28, 4);
+  px(cx - 18, cy - 36, c, 4, 16);
+  px(cx + 14, cy - 36, c, 4, 16);
+  // Glowing eye sockets
+  px(cx - 10, cy - 30, dark, 6, 6);
+  px(cx + 4, cy - 30, dark, 6, 6);
+  px(cx - 9, cy - 29, '#ff4040', 4, 4);
+  px(cx + 5, cy - 29, '#ff4040', 4, 4);
+  px(cx - 8, cy - 28, '#ffff80', 2, 2);
+  px(cx + 6, cy - 28, '#ffff80', 2, 2);
+  // Mouth (teeth grin)
+  px(cx - 8, cy - 20, dark, 16, 4);
+  px(cx - 6, cy - 19, '#fff', 2, 2);
+  px(cx - 2, cy - 19, '#fff', 2, 2);
+  px(cx + 2, cy - 19, '#fff', 2, 2);
+  // Massive arms
+  px(cx - 32, cy - 14, c, 12, 32);
+  px(cx + 20, cy - 14, c, 12, 32);
+  px(cx - 32, cy + 14, dark, 12, 4);
+  px(cx + 20, cy + 14, dark, 12, 4);
+  // Knuckles/fingers
+  px(cx - 32, cy + 18, light, 4, 6);
+  px(cx - 26, cy + 18, light, 4, 6);
+  px(cx + 22, cy + 18, light, 4, 6);
+  px(cx + 28, cy + 18, light, 4, 6);
   // Legs
-  px(cx - 14, cy + 22, c, 14, 14);
-  px(cx, cy + 22, c, 14, 14);
+  px(cx - 14, cy + 22, c, 12, 14);
+  px(cx + 2, cy + 22, c, 12, 14);
+  px(cx - 16, cy + 32, dark, 14, 4);
+  px(cx + 2, cy + 32, dark, 14, 4);
+  // Glowing core in chest
+  px(cx - 4, cy - 6, '#ff4040', 8, 6);
+  px(cx - 2, cy - 4, '#ffff80', 4, 2);
+}
+
+function shadeColor(hex, amount) {
+  // amount in [-100, 100], negative darker
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  if (!m) return hex;
+  const adj = (n) => Math.max(0, Math.min(255, n + Math.round(amount * 2.55)));
+  const r = adj(parseInt(m[1], 16));
+  const g = adj(parseInt(m[2], 16));
+  const b = adj(parseInt(m[3], 16));
+  return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
 }
 
 function drawAttackIndicators() {
