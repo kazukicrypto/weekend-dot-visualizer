@@ -805,9 +805,12 @@ function useMeat() {
 function togglePause() {
   if (state.scene !== 'battle') return;
   state.paused = !state.paused;
+  const ag = document.getElementById('audio-toggle');
   if (state.paused) {
+    if (ag) ag.classList.add('show-options');
     showOverlay('PAUSED', 'タップで再開', 'paused');
   } else {
+    if (ag) ag.classList.remove('show-options');
     hideOverlay();
   }
 }
@@ -1392,10 +1395,12 @@ function syncHud() {
   if (!k) return;
   // HP
   const hpFill = document.getElementById('hp-fill');
-  const hpText = document.getElementById('hp-text');
   if (hpFill) hpFill.style.width = `${(k.hp / k.maxHp) * 100}%`;
-  if (hpText) hpText.textContent = `${Math.ceil(k.hp)}/${k.maxHp}`;
-  // Level
+  const hpNum = document.getElementById('hp-num');
+  const hpMax = document.getElementById('hp-max');
+  if (hpNum) hpNum.textContent = Math.ceil(k.hp);
+  if (hpMax) hpMax.textContent = k.maxHp;
+  // Level (battle HUD pill)
   const lvNum = document.getElementById('lv-num');
   if (lvNum) lvNum.textContent = state.level;
 
@@ -2592,8 +2597,8 @@ function bindUi() {
   if (shopBack) shopBack.addEventListener('click', () => { ensureAudio(); showMainMenu(); });
 
   // Main menu icons
-  for (const btn of document.querySelectorAll('.menu-btn')) {
-    btn.addEventListener('click', () => {
+  const handleMenu = (btn) => {
+    try {
       ensureAudio();
       if (btn.classList.contains('locked')) {
         showLockToast();
@@ -2603,7 +2608,12 @@ function bindUi() {
       if (which === 'oshigoto') showStageSelect();
       else if (which === 'souvi') showEquipmentScreen();
       else if (which === 'shop') showShopScreen();
-    });
+    } catch (err) {
+      console.error('menu click failed', err);
+    }
+  };
+  for (const btn of document.querySelectorAll('.menu-btn')) {
+    btn.addEventListener('click', () => handleMenu(btn));
   }
 
   const btnPause = document.getElementById('btn-pause');

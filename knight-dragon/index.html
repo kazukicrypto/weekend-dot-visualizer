@@ -107,10 +107,13 @@
 
     <div id="hud">
       <div id="bars">
-        <div class="bar-row">
-          <span class="bar-label">HP</span>
-          <div class="bar hp-bar"><div id="hp-fill"></div><span id="hp-text">200/200</span></div>
+        <div class="hp-display">
+          <span class="hp-label">HP</span>
           <span class="lv-pill">Lv <span id="lv-num">1</span></span>
+          <span class="hp-number"><span id="hp-num">200</span><span class="hp-slash">/</span><span id="hp-max">200</span></span>
+        </div>
+        <div class="bar-row">
+          <div class="bar hp-bar"><div id="hp-fill"></div></div>
         </div>
         <div class="bar-row">
           <span class="bar-label">AP</span>
@@ -189,7 +192,7 @@
       <div class="menu-frame">
         <div class="menu-statusbar">
           <div class="status-left">
-            <div class="status-rank">ランク <span id="status-rank-num">1</span></div>
+            <div class="status-rank">Lv <span id="status-rank-num">1</span></div>
           </div>
           <div class="status-right">
             <div class="status-coin">💰 <span id="status-coin">0</span></div>

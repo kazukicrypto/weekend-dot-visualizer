@@ -100,6 +100,21 @@ html, body {
 
 .audio-btn.off { opacity: 0.4; }
 
+/* Hide SE/BGM by default; reveal when pause is active */
+#audio-toggle #btn-se,
+#audio-toggle #btn-bgm {
+  display: none;
+}
+#audio-toggle.show-options #btn-se,
+#audio-toggle.show-options #btn-bgm {
+  display: inline-flex;
+  animation: aud-fade 0.18s ease-out;
+}
+@keyframes aud-fade {
+  from { transform: translateX(8px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
 /* ===== Chest stack (horizontal, top bar) ===== */
 #chest-stack {
   position: absolute;
@@ -456,20 +471,51 @@ html, body {
 .side-label { font-size: 11px; font-weight: bold; letter-spacing: 1px; margin-top: 3px; text-shadow: 1px 1px 0 #000; }
 .side-count { position: absolute; bottom: 2px; right: 5px; font-size: 12px; font-weight: bold; text-shadow: 1px 1px 0 #000; }
 
-/* Level pill in HP row */
+/* HP row with big number on the right (matches original) */
+.hp-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+  margin-bottom: 2px;
+}
+.hp-label {
+  font-size: 12px;
+  font-weight: 900;
+  color: #6dd654;
+  text-shadow: 1px 1px 0 #000;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+.hp-number {
+  margin-left: auto;
+  font-size: 22px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 2px 2px 0 #000, -1px -1px 0 #000;
+  font-family: 'Helvetica Neue', sans-serif;
+  letter-spacing: 0;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.hp-number .hp-slash { color: #aaa; margin: 0 2px; font-weight: bold; }
+.hp-number #hp-max { font-size: 16px; color: #cccccc; font-weight: bold; }
+
+/* Level pill */
 .lv-pill {
   background: linear-gradient(180deg, #f8e090, #c8a040);
   color: #3a2810;
   font-weight: bold;
-  font-size: 10px;
-  padding: 2px 7px;
+  font-size: 11px;
+  padding: 3px 9px;
   border-radius: 999px;
-  border: 1px solid #6a4818;
+  border: 1.5px solid #6a4818;
   flex-shrink: 0;
   text-shadow: none;
   letter-spacing: 0.5px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.4);
 }
-.lv-pill #lv-num { font-size: 12px; font-weight: 900; }
+.lv-pill #lv-num { font-size: 14px; font-weight: 900; }
 
 /* ===== Full-screen screens (stage select, result) ===== */
 .screen {
