@@ -1161,40 +1161,36 @@ const ITEM_EFFECTS = {
 //   0 = balanced, 1 = primary stat focused, 2 = secondary stat focused, 3 = enhanced balanced
 const UR_VARIANTS = {
   sword: [
-    { name: 'エクスカリバー',   tag: 'バランス',   dmgBonus: 0.22, critBonus: 0.22 },
-    { name: 'グラム',           tag: '攻撃特化',   dmgBonus: 0.32, critBonus: 0.12 },
-    { name: 'ムラサメ',         tag: '会心特化',   dmgBonus: 0.15, critBonus: 0.32 },
-    { name: 'デュランダル',     tag: '聖騎士',     dmgBonus: 0.27, critBonus: 0.27 },
-    { name: 'デスサイン',       tag: '即死',       dmgBonus: 0.18, critBonus: 0.18,
-      special: 'deathStrike',  iconId: 'ur-sword-deathsign',
-      desc: 'セブンクロス時 25%で即死（ボスはHP-50%）' },
+    { name: 'エクスカリバー',   tag: 'バランス',   iconId: 'ur-sword-excalibur', dmgBonus: 0.22, critBonus: 0.22 },
+    { name: 'グラム',           tag: '攻撃特化',   iconId: 'ur-sword-gram',      dmgBonus: 0.32, critBonus: 0.12 },
+    { name: 'ムラサメ',         tag: '会心特化',   iconId: 'ur-sword-murasame',  dmgBonus: 0.15, critBonus: 0.32 },
+    { name: 'デュランダル',     tag: '聖騎士',     iconId: 'ur-sword-durandal',  dmgBonus: 0.27, critBonus: 0.27 },
+    { name: 'デスサイン',       tag: '即死',       iconId: 'ur-sword-deathsign', dmgBonus: 0.18, critBonus: 0.18,
+      special: 'deathStrike',  desc: 'セブンクロス時 25%で即死（ボスはHP-50%）' },
   ],
   spear: [
-    { name: 'グングニル',       tag: 'バランス',   apRegenBonus: 0.40, ppBonus: 0.32 },
-    { name: '飛雷の槍',         tag: 'AP特化',     apRegenBonus: 0.55, ppBonus: 0.20 },
-    { name: 'ロンギヌス',       tag: 'PP特化',     apRegenBonus: 0.28, ppBonus: 0.48 },
-    { name: '神槍ティルフィング', tag: '神器',     apRegenBonus: 0.46, ppBonus: 0.40 },
-    { name: 'ビニール傘',       tag: '無効化',     apRegenBonus: 0.30, ppBonus: 0.25,
-      special: 'nullify',      iconId: 'ur-spear-umbrella',
-      desc: 'ドラゴン突きで次の敵攻撃を無効化' },
+    { name: 'グングニル',       tag: 'バランス',   iconId: 'ur-spear-gungnir',   apRegenBonus: 0.40, ppBonus: 0.32 },
+    { name: '飛雷の槍',         tag: 'AP特化',     iconId: 'ur-spear-thunder',   apRegenBonus: 0.55, ppBonus: 0.20 },
+    { name: 'ロンギヌス',       tag: 'PP特化',     iconId: 'ur-spear-longinus',  apRegenBonus: 0.28, ppBonus: 0.48 },
+    { name: '神槍ティルフィング', tag: '神器',     iconId: 'ur-spear-tirfing',   apRegenBonus: 0.46, ppBonus: 0.40 },
+    { name: 'ビニール傘',       tag: '無効化',     iconId: 'ur-spear-umbrella',  apRegenBonus: 0.30, ppBonus: 0.25,
+      special: 'nullify',      desc: 'ドラゴン突きで次の敵攻撃を無効化' },
   ],
   hammer: [
-    { name: 'ミョルニル',       tag: 'バランス',   aoeBonus: 0.40, stunBonus: 0.55 },
-    { name: '雷神槌',           tag: 'AOE特化',    aoeBonus: 0.58, stunBonus: 0.32 },
-    { name: '大地砕き槌',       tag: 'PIYO特化',   aoeBonus: 0.25, stunBonus: 0.78 },
-    { name: '神鉄槌',           tag: '神器',       aoeBonus: 0.48, stunBonus: 0.62 },
-    { name: 'ゴールデンハンマー', tag: '金運',     aoeBonus: 0.30, stunBonus: 0.40,
-      special: 'goldRush',     iconId: 'ur-hammer-golden',
-      desc: '地割れ時 8秒間ゴールド2倍' },
+    { name: 'ミョルニル',       tag: 'バランス',   iconId: 'ur-hammer-mjolnir',  aoeBonus: 0.40, stunBonus: 0.55 },
+    { name: '雷神槌',           tag: 'AOE特化',    iconId: 'ur-hammer-thunder',  aoeBonus: 0.58, stunBonus: 0.32 },
+    { name: '大地砕き槌',       tag: 'PIYO特化',   iconId: 'ur-hammer-quake',    aoeBonus: 0.25, stunBonus: 0.78 },
+    { name: '神鉄槌',           tag: '神器',       iconId: 'ur-hammer-divine',   aoeBonus: 0.48, stunBonus: 0.62 },
+    { name: 'ゴールデンハンマー', tag: '金運',     iconId: 'ur-hammer-golden',   aoeBonus: 0.30, stunBonus: 0.40,
+      special: 'goldRush',     desc: '地割れ時 8秒間ゴールド2倍' },
   ],
   shield: [
-    { name: 'アイギス',         tag: 'バランス',   defBonus: 0.30, guardWindow: 0.14 },
-    { name: '不壊の盾',         tag: '防御特化',   defBonus: 0.42, guardWindow: 0.10 },
-    { name: '見切りの盾',       tag: '猶予特化',   defBonus: 0.24, guardWindow: 0.22 },
-    { name: '守護神盾',         tag: '神器',       defBonus: 0.36, guardWindow: 0.18 },
-    { name: 'マジックミラー',   tag: '反射',       defBonus: 0.20, guardWindow: 0.10,
-      special: 'reflect',      iconId: 'ur-shield-mirror',
-      desc: 'JUST/MIRACLEで攻撃を40%反射' },
+    { name: 'アイギス',         tag: 'バランス',   iconId: 'ur-shield-aegis',    defBonus: 0.30, guardWindow: 0.14 },
+    { name: '不壊の盾',         tag: '防御特化',   iconId: 'ur-shield-iron',     defBonus: 0.42, guardWindow: 0.10 },
+    { name: '見切りの盾',       tag: '猶予特化',   iconId: 'ur-shield-evade',    defBonus: 0.24, guardWindow: 0.22 },
+    { name: '守護神盾',         tag: '神器',       iconId: 'ur-shield-guardian', defBonus: 0.36, guardWindow: 0.18 },
+    { name: 'マジックミラー',   tag: '反射',       iconId: 'ur-shield-mirror',   defBonus: 0.20, guardWindow: 0.10,
+      special: 'reflect',      desc: 'JUST/MIRACLEで攻撃を40%反射' },
   ],
 };
 
@@ -1958,25 +1954,30 @@ function syncHud() {
     fill.style.width = `${v * 100}%`;
   }
 
-  // Current move buttons (row 2)
+  // Current move buttons (row 2) + NEXT preview (row 3)
   for (const wKey of ['sword', 'spear', 'hammer']) {
+    const equipped = getEquippedItem(wKey);
+    const iconId = equipped ? getItemIconId(equipped) : ('ico-' + wKey);
     const btn = document.querySelector(`.current-btn[data-weapon="${wKey}"]`);
     const move = getCurrentMove(wKey);
     if (btn) {
       const apEl = btn.querySelector('.ap-cost');
       const nameEl = btn.querySelector('.cell-name');
+      const iconUse = btn.querySelector('.move-icon use');
       if (apEl) apEl.textContent = move.ap;
       if (nameEl) nameEl.textContent = move.name;
+      if (iconUse) iconUse.setAttribute('href', '#' + iconId);
       btn.disabled = k.ap < move.ap;
     }
-    // NEXT preview cell (row 3)
     const next = getNextMove(wKey);
     const nextCell = document.querySelector(`.next-cell[data-weapon="${wKey}"]`);
     if (nextCell) {
       const apEl = nextCell.querySelector('.next-ap');
       const nameEl = nextCell.querySelector('.next-name');
+      const iconUse = nextCell.querySelector('.next-icon use');
       if (apEl) apEl.textContent = next.ap;
       if (nameEl) nameEl.textContent = next.name;
+      if (iconUse) iconUse.setAttribute('href', '#' + iconId);
     }
   }
 
@@ -1987,7 +1988,7 @@ function syncHud() {
     rn.textContent = `${state.roundIdx + 1}/${stage.rounds.length}`;
   }
 
-  // Equipment slots (rarity + plus) – read from equipped items
+  // Equipment slots (icon, rarity + plus) – read from equipped items
   for (const wKey of ITEM_TYPES) {
     const slot = document.querySelector(`.eq-slot[data-slot="${wKey}"]`);
     if (!slot) continue;
@@ -1998,6 +1999,8 @@ function syncHud() {
     slot.classList.add(`rarity-${rarity}`);
     const plusEl = slot.querySelector('.eq-plus');
     if (plusEl) plusEl.textContent = `+${plus}`;
+    const iconUse = slot.querySelector('.eq-icon use');
+    if (iconUse) iconUse.setAttribute('href', '#' + (item ? getItemIconId(item) : ('ico-' + wKey)));
   }
 
   // Meat count
