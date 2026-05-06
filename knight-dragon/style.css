@@ -81,12 +81,12 @@ html, body {
 }
 
 #audio-toggle {
-  position: absolute;
-  top: 10px;
-  right: 10px;
+  position: fixed;
+  top: max(env(safe-area-inset-top, 10px), 10px);
+  right: max(env(safe-area-inset-right, 10px), 10px);
   display: flex;
   gap: 6px;
-  z-index: 2;
+  z-index: 50;
 }
 
 .audio-btn {
@@ -1268,6 +1268,120 @@ html, body {
   text-align: center;
   max-width: 80%;
   box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+}
+
+/* ===== Fusion modal ===== */
+#fuse-base {
+  background: linear-gradient(180deg, #4a3520 0%, #2a1a10 100%);
+  border: 2px solid #ffd066;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  box-shadow: 0 0 8px rgba(255,208,102,0.4);
+}
+#fuse-base .equip-icon { width: 32px; height: 44px; flex-shrink: 0; }
+#fuse-base .fuse-base-meta { flex: 1; }
+#fuse-base .fuse-base-name { font-size: 16px; font-weight: bold; color: #fff; text-shadow: 1px 1px 0 #000; }
+#fuse-base .fuse-base-stats { font-size: 11px; color: #ffd066; margin-top: 4px; }
+
+#fuse-materials {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 6px;
+  background: rgba(0,0,0,0.25);
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 12px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.fuse-material {
+  font-family: inherit;
+  background: linear-gradient(180deg, #3a2818 0%, #1a0e04 100%);
+  border: 2px solid #8b6940;
+  border-radius: 5px;
+  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: #fff;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.05s;
+}
+.fuse-material:active { transform: scale(0.95); }
+.fuse-material svg { width: 22px; height: 30px; shape-rendering: crispEdges; }
+.fuse-material.rarity-common { border-color: #aaa; }
+.fuse-material.rarity-r      { border-color: #5fb0e8; }
+.fuse-material.rarity-sr     { border-color: #d090ff; }
+.fuse-material.rarity-ur     { border-color: #ffd066; box-shadow: 0 0 6px rgba(255,208,102,0.6); }
+.fuse-material.selected {
+  background: linear-gradient(180deg, #8050a0 0%, #401860 100%);
+  box-shadow: 0 0 10px rgba(255,200,255,0.7);
+}
+.fuse-material.selected::after {
+  content: '✓';
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  background: #ffd066;
+  color: #3a2410;
+  font-weight: 900;
+  font-size: 11px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #6a4818;
+}
+.fuse-material .fuse-mat-name {
+  font-size: 9px;
+  color: #ffe0a0;
+  text-align: center;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.fuse-material .fuse-mat-info {
+  display: flex; gap: 3px; align-items: center;
+  font-size: 9px;
+}
+.fuse-material .fuse-mat-info .plus-tag { color: #ffd066; font-weight: 900; text-shadow: 1px 1px 0 #000; }
+
+.fuse-summary {
+  text-align: center;
+  font-size: 14px;
+  color: #ffe0a0;
+  margin-bottom: 12px;
+  font-weight: bold;
+  background: rgba(0,0,0,0.4);
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,208,102,0.4);
+}
+.fuse-summary #fuse-gain { color: #ffd066; font-size: 18px; font-weight: 900; }
+
+.fuse-btn {
+  font-family: inherit;
+  background: linear-gradient(180deg, #c08050 0%, #6a3818 100%);
+  border: 2px solid #ffd066;
+  color: #fff;
+  font-weight: bold;
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 /* ===== UR drop fanfare ===== */

@@ -339,11 +339,27 @@
     <div id="equipment-screen" class="screen hidden">
       <div class="screen-inner">
         <h2 class="screen-title">そうび</h2>
-        <p class="result-instruction">所持品をタップして装備変更</p>
+        <p class="result-instruction">所持品をタップして装備変更／🔨で重複武器を強化</p>
         <div id="equipped-grid"></div>
         <h3 class="section-title">所持品</h3>
         <div id="inventory-list"></div>
         <button id="equipment-back" class="big-btn">メニューへ戻る</button>
+      </div>
+    </div>
+
+    <!-- ===== Fusion Modal ===== -->
+    <div id="fuse-screen" class="screen hidden">
+      <div class="screen-inner">
+        <h2 class="screen-title">重複武器を強化</h2>
+        <p class="result-instruction">同じ種類の所持品を素材にして強化値を上げる</p>
+        <div id="fuse-base"></div>
+        <h3 class="section-title">素材を選択（タップで選択）</h3>
+        <div id="fuse-materials"></div>
+        <div class="fuse-summary">
+          選択 <span id="fuse-count">0</span> 個 / 強化値 <span id="fuse-gain">+0</span>
+        </div>
+        <button id="fuse-confirm" class="big-btn">強化する</button>
+        <button id="fuse-cancel" class="big-btn" style="background: linear-gradient(180deg, #6b4d2a 0%, #3a2410 100%); border-color: #8b6940; margin-top: 6px;">キャンセル</button>
       </div>
     </div>
 

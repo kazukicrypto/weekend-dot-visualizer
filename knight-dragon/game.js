@@ -601,18 +601,84 @@ function tryHitGoldenDragon(sx, sy) {
 }
 
 function onGoldenDragonDefeated() {
-  const gold = 600 + Math.floor(Math.random() * 400);
-  state.gold = (state.gold || 0) + gold;
-  // Bonus UR chest dropped into the current pile
-  const types = ITEM_TYPES;
-  const type = types[Math.floor(Math.random() * types.length)];
-  state.chests.push({ type, rarity: 'ur', plus: 5, opened: false });
-  renderChestStack();
-  addFloat('★ 金のドラゴン撃破!', W / 2, 100, '#ffd066', 2.6, 28);
-  addFloat(`+${gold} GOLD  /  UR装備!`, W / 2, 140, '#ffe080', 2.6, 22);
-  sound.victory();
   state.goldenDragon = null;
+  addFloat('★ 金のドラゴン撃破!', W / 2, 100, '#ffd066', 2.0, 28);
+  sound.victory();
+  // Transition to hidden bonus stage
+  setTimeout(enterBonusStage, 600);
+}
+
+function enterBonusStage() {
+  if (state.scene !== 'battle') return;
+  state.bonusActive = true;
+  state.bonusTimer = 25;
+  state.bonusGoldStart = state.gold || 0;
+  state.bonusEnemiesKilled = 0;
+  // Skip remaining current-round enemies entirely
+  state.enemies = [];
+  spawnBonusDragons();
+  state.flashTimer = 0.6;
+  shake = 14;
+  state.weakHintTimer = 0;
+  addFloat('★ ボーナスステージ ★', W / 2, 110, '#ffd066', 2.4, 26);
+  addFloat('金のドラゴンを撃て!', W / 2, 150, '#fff', 1.8, 18);
+  sound.special();
+  state.roundCleared = false;
+  syncHud();
+}
+
+function spawnBonusDragons() {
+  // 6 weak gold dragons spread across the field
+  const count = 6;
+  const slots = [];
+  for (let i = 0; i < count; i++) slots.push(i);
+  for (const i of slots) {
+    const e = createBonusDragon(i);
+    state.enemies.push(e);
+  }
+  state.targetIdx = 0;
+}
+
+function createBonusDragon(idx) {
+  const cols = 3;
+  const col = idx % cols;
+  const row = Math.floor(idx / cols);
+  return {
+    type: 'goldDragonBonus',
+    name: '金のドラゴン',
+    hp: 28, maxHp: 28,
+    weak: 'sword', // any weapon works
+    atkDmg: 0, atk: [9999, 9999],
+    color: '#ffd066', accent: '#fff8c0', size: 0.55,
+    x: 230 + col * 80 + (Math.random() * 16 - 8),
+    y: 200 + row * 90 + (Math.random() * 16 - 8),
+    pp: 0, maxPp: 9999,
+    stunned: false, stunTimer: 0,
+    attackTimer: 9999,
+    pendingAtk: { name: '攻撃', dmg: 0, aoe: false },
+    altAtk: null,
+    hitTimer: 0,
+    bob: Math.random() * Math.PI * 2,
+    slot: idx,
+    bonus: true,
+  };
+}
+
+function endBonusStage() {
+  if (!state.bonusActive) return;
+  const earned = (state.gold || 0) - (state.bonusGoldStart || 0);
+  state.bonusActive = false;
+  state.bonusTimer = 0;
+  state.enemies = [];
+  state.flashTimer = 0.5;
+  addFloat('BONUS CLEAR!', W / 2, 120, '#ffd066', 2.4, 30);
+  addFloat(`合計 +${earned} GOLD`, W / 2, 160, '#ffe080', 2.4, 22);
+  sound.victory();
   saveProgress();
+  // Skip the post-clear chest drop (bonus stage gives no chest) and advance round
+  state._skipNextChest = true;
+  state.roundCleared = false;
+  setTimeout(() => { if (state.scene === 'battle') onRoundClear(); }, 1300);
 }
 
 // Pet companion (always active during battle)
@@ -635,18 +701,22 @@ function petAttack() {
   state.pet.attackAnim = 0.5;
   state.pet.targetX = target.x;
   state.pet.targetY = target.y;
-  if (target.hp <= 0 && !target._goldGiven) {
-    target._goldGiven = true;
-    const base = Math.max(2, Math.floor(target.maxHp / 8));
-    const reward = state.goldRushTimer > 0 ? base * 2 : base;
-    state.gold = (state.gold || 0) + reward;
-    addFloat(`💰+${reward}${state.goldRushTimer > 0 ? ' x2' : ''}`, target.x, target.y - 18, '#ffd066', 1.0, 14);
-  }
+  awardGoldForKill(target);
   if (aliveEnemies().length === 0) onRoundClear();
 }
 
 function aliveEnemies() {
   return state.enemies.filter(e => e.hp > 0);
+}
+
+// Award gold for a kill (handles bonus dragons + GOLD RUSH x2)
+function awardGoldForKill(target) {
+  if (!target || target._goldGiven) return;
+  target._goldGiven = true;
+  const base = target.bonus ? 100 : Math.max(2, Math.floor(target.maxHp / 8));
+  const reward = state.goldRushTimer > 0 ? base * 2 : base;
+  state.gold = (state.gold || 0) + reward;
+  addFloat(`💰+${reward}${state.goldRushTimer > 0 ? ' x2' : ''}`, target.x, target.y - 18, '#ffd066', 1.0, target.bonus ? 18 : 14);
 }
 
 function getTarget() {
@@ -813,13 +883,7 @@ function attack(weaponKey) {
     }
 
     // Gold drop on kill
-    if (target.hp <= 0 && !target._goldGiven) {
-      target._goldGiven = true;
-      const base = Math.max(2, Math.floor(target.maxHp / 8));
-      const reward = state.goldRushTimer > 0 ? base * 2 : base;
-      state.gold = (state.gold || 0) + reward;
-      addFloat(`💰+${reward}${state.goldRushTimer > 0 ? ' x2' : ''}`, target.x, target.y - 18, '#ffd066', 1.0, 14);
-    }
+    awardGoldForKill(target);
   }
 
   // Hit combo
@@ -869,13 +933,7 @@ function fireSpecial(special) {
         en.hp = Math.max(0, en.hp - perHit);
         en.hitTimer = 0.3;
         addFloat(`-${perHit}`, en.x + (Math.random() * 30 - 15), en.y - 30 - h * 14, special.color, 0.85, 22);
-        if (en.hp <= 0 && !en._goldGiven) {
-          en._goldGiven = true;
-          const base = Math.max(2, Math.floor(en.maxHp / 8));
-          const reward = state.goldRushTimer > 0 ? base * 2 : base;
-          state.gold = (state.gold || 0) + reward;
-          addFloat(`💰+${reward}${state.goldRushTimer > 0 ? ' x2' : ''}`, en.x, en.y - 18, '#ffd066', 1.0, 14);
-        }
+        awardGoldForKill(en);
       }
       shake = Math.min(20, shake + 4);
       if (aliveEnemies().length === 0) onRoundClear();
@@ -930,13 +988,7 @@ function tryGuard() {
       incoming.hitTimer = 0.3;
       addFloat(`反射 -${reflectDmg}`, incoming.x, incoming.y - 30, '#80ffff', 1.0, 18);
       shake = Math.min(14, shake + 4);
-      if (incoming.hp <= 0 && !incoming._goldGiven) {
-        incoming._goldGiven = true;
-        const base = Math.max(2, Math.floor(incoming.maxHp / 8));
-        const reward = state.goldRushTimer > 0 ? base * 2 : base;
-        state.gold = (state.gold || 0) + reward;
-        addFloat(`💰+${reward}`, incoming.x, incoming.y - 18, '#ffd066', 1.0, 14);
-      }
+      awardGoldForKill(incoming);
       if (aliveEnemies().length === 0) {
         onRoundClear();
         syncHud();
@@ -1022,10 +1074,18 @@ function onEnemyAttackLand(e) {
 }
 
 function onRoundClear() {
+  // If we're in the bonus stage, killing all gold dragons ends the bonus
+  // (and from there bonus end will re-enter onRoundClear to advance for real)
+  if (state.bonusActive) {
+    endBonusStage();
+    return;
+  }
   if (state.roundCleared) return;
   state.roundCleared = true;
-  // Drop chance per round clear (chest accumulates, not yet revealed)
-  if (Math.random() < 0.65) {
+  // Drop chance per round clear, unless bonus stage just ended (skip flag set)
+  if (state._skipNextChest) {
+    state._skipNextChest = false;
+  } else if (Math.random() < 0.65) {
     setTimeout(() => { if (state.scene === 'battle') addChest(); }, 350);
   }
 
@@ -1271,7 +1331,7 @@ function renderChestStack() {
 // ============================================================
 // SCENE: MAIN MENU
 // ============================================================
-const MENU_SCREENS = ['main-menu', 'stage-select', 'equipment-screen', 'result-screen', 'shop-screen'];
+const MENU_SCREENS = ['main-menu', 'stage-select', 'equipment-screen', 'result-screen', 'shop-screen', 'fuse-screen'];
 function hideAllScreens() {
   for (const id of MENU_SCREENS) {
     const el = document.getElementById(id);
@@ -1344,6 +1404,8 @@ function renderEquippedGrid() {
         ).join('')}</div>`
       : '<div class="equip-effects empty">効果なし</div>';
     const iconId = item ? getItemIconId(item) : ('ico-' + t);
+    const materialCount = item ? state.inventory.filter(i => i.type === t && i.id !== item.id).length : 0;
+    const fuseBtn = item && materialCount > 0 ? `<button class="fuse-btn" data-fuse-type="${t}">🔨 強化(${materialCount})</button>` : '';
     card.innerHTML = `
       <div class="equip-head">
         <svg class="equip-icon"><use href="#${iconId}"/></svg>
@@ -1352,11 +1414,125 @@ function renderEquippedGrid() {
           <div class="equip-name">${item ? (item.name || itemName(t, item.rarity)) : '未装備'}</div>
           ${item ? `<div class="equip-stats"><span class="rarity-tag">${RARITY_LABEL[item.rarity]}</span><span class="plus-tag">+${item.plus}</span></div>` : ''}
         </div>
+        ${fuseBtn}
       </div>
       ${effHtml}
     `;
+    const fuseBtnEl = card.querySelector('.fuse-btn');
+    if (fuseBtnEl) {
+      fuseBtnEl.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        showFuseScreen(t);
+      });
+    }
     grid.appendChild(card);
   }
+}
+
+// ============================================================
+// SCENE: WEAPON FUSION
+// ============================================================
+function showFuseScreen(type) {
+  const baseItem = getEquippedItem(type);
+  if (!baseItem) return;
+  state.scene = 'fuse';
+  state._fuseType = type;
+  state._fuseSelected = new Set();
+  hideAllScreens();
+  document.getElementById('fuse-screen').classList.remove('hidden');
+  renderFuseScreen();
+}
+
+function renderFuseScreen() {
+  const type = state._fuseType;
+  const baseItem = getEquippedItem(type);
+  const baseEl = document.getElementById('fuse-base');
+  const matsEl = document.getElementById('fuse-materials');
+  const sumCount = document.getElementById('fuse-count');
+  const sumGain = document.getElementById('fuse-gain');
+  const confirmBtn = document.getElementById('fuse-confirm');
+
+  if (!baseItem) {
+    baseEl.innerHTML = '<div class="fuse-base-meta">装備が見つかりません</div>';
+    matsEl.innerHTML = '';
+    if (confirmBtn) confirmBtn.disabled = true;
+    return;
+  }
+
+  const baseIcon = getItemIconId(baseItem);
+  baseEl.innerHTML = `
+    <svg class="equip-icon"><use href="#${baseIcon}"/></svg>
+    <div class="fuse-base-meta">
+      <div class="fuse-base-name">${baseItem.name} <span style="color:#ffd066">+${baseItem.plus}</span></div>
+      <div class="fuse-base-stats">${TYPE_NAMES[type]}  /  ${RARITY_LABEL[baseItem.rarity]}</div>
+    </div>
+  `;
+
+  // Materials = all other items of the same type that aren't the base
+  const mats = state.inventory.filter(i => i.type === type && i.id !== baseItem.id);
+  matsEl.innerHTML = '';
+  if (mats.length === 0) {
+    matsEl.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#aaa;padding:14px">同じ種類の所持品なし</p>';
+  }
+  mats.sort((a, b) => RARITY_RANK[a.rarity] - RARITY_RANK[b.rarity] || a.plus - b.plus);
+  for (const mat of mats) {
+    const card = document.createElement('button');
+    card.type = 'button';
+    const selected = state._fuseSelected.has(mat.id);
+    card.className = `fuse-material rarity-${mat.rarity}${selected ? ' selected' : ''}`;
+    const icon = getItemIconId(mat);
+    card.innerHTML = `
+      <svg><use href="#${icon}"/></svg>
+      <div class="fuse-mat-name">${mat.name}</div>
+      <div class="fuse-mat-info">
+        <span class="rarity-tag" style="color:${RARITY_COLOR[mat.rarity]}">${RARITY_LABEL[mat.rarity]}</span>
+        <span class="plus-tag">+${mat.plus}</span>
+      </div>
+    `;
+    card.addEventListener('click', () => {
+      if (state._fuseSelected.has(mat.id)) state._fuseSelected.delete(mat.id);
+      else state._fuseSelected.add(mat.id);
+      renderFuseScreen();
+    });
+    matsEl.appendChild(card);
+  }
+
+  // Compute totals
+  let totalGain = 0;
+  for (const id of state._fuseSelected) {
+    const m = state.inventory.find(i => i.id === id);
+    if (m) totalGain += 1 + (m.plus || 0);
+  }
+  if (sumCount) sumCount.textContent = state._fuseSelected.size;
+  if (sumGain) sumGain.textContent = `+${totalGain}`;
+  if (confirmBtn) confirmBtn.disabled = state._fuseSelected.size === 0;
+}
+
+function confirmFusion() {
+  const type = state._fuseType;
+  const baseItem = getEquippedItem(type);
+  if (!baseItem) return;
+  const selected = Array.from(state._fuseSelected || []);
+  if (selected.length === 0) return;
+  let gain = 0;
+  for (const id of selected) {
+    const m = state.inventory.find(i => i.id === id);
+    if (m) gain += 1 + (m.plus || 0);
+  }
+  baseItem.plus = (baseItem.plus || 0) + gain;
+  // Remove materials
+  state.inventory = state.inventory.filter(i => !state._fuseSelected.has(i.id));
+  state._fuseSelected = new Set();
+  saveProgress();
+  sound.special();
+  showShopToast(`${baseItem.name} +${baseItem.plus} に強化!\n+${gain} 強化値`);
+  // Return to equipment screen
+  hideAllScreens();
+  document.getElementById('equipment-screen').classList.remove('hidden');
+  state.scene = 'equipment';
+  renderEquippedGrid();
+  renderInventoryList();
+  syncHud();
 }
 
 function renderInventoryList() {
@@ -1922,6 +2098,14 @@ function update(dt) {
     state.goldRushTimer = Math.max(0, state.goldRushTimer - dt);
   }
 
+  // Bonus stage countdown
+  if (state.bonusActive) {
+    state.bonusTimer = Math.max(0, state.bonusTimer - dt);
+    if (state.bonusTimer <= 0) {
+      endBonusStage();
+    }
+  }
+
   syncHud();
 }
 
@@ -2346,6 +2530,7 @@ function drawEnemy(e) {
     case 'turtle': drawTurtle(cx, cy, c, a); break;
     case 'dragon': drawDragon(cx, cy, c, a); break;
     case 'kingDrag': drawDragon(cx, cy, c, a); break;
+    case 'goldDragonBonus': drawDragon(cx, cy, c, a); break;
     case 'golem': drawGolem(cx, cy, c, a); break;
     case 'rockGolem': drawGolem(cx, cy, c, a); break;
   }
@@ -2825,6 +3010,9 @@ function drawBuffBadges() {
     const remaining = state.goldRushTimer.toFixed(1);
     badges.push({ label: `💰 GOLD x2  ${remaining}s`, color: '#ffd066', bg: 'rgba(120,80,20,0.85)' });
   }
+  if (state.bonusActive) {
+    badges.push({ label: `★ BONUS  ${state.bonusTimer.toFixed(1)}s`, color: '#ffd066', bg: 'rgba(120,80,20,0.9)' });
+  }
   if (!badges.length) return;
   const x = W - 12;
   let y = H - 30;
@@ -3099,6 +3287,20 @@ function bindUi() {
   // Shop back
   const shopBack = document.getElementById('shop-back');
   if (shopBack) shopBack.addEventListener('click', () => { ensureAudio(); showMainMenu(); });
+
+  // Fusion screen actions
+  const fuseConfirm = document.getElementById('fuse-confirm');
+  if (fuseConfirm) fuseConfirm.addEventListener('click', () => { ensureAudio(); confirmFusion(); });
+  const fuseCancel = document.getElementById('fuse-cancel');
+  if (fuseCancel) fuseCancel.addEventListener('click', () => {
+    ensureAudio();
+    state._fuseSelected = new Set();
+    hideAllScreens();
+    document.getElementById('equipment-screen').classList.remove('hidden');
+    state.scene = 'equipment';
+    renderEquippedGrid();
+    renderInventoryList();
+  });
 
   // Main menu icons
   const handleMenu = (btn) => {
