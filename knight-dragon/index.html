@@ -9,38 +9,88 @@
 <body>
   <div id="app">
     <div id="game-wrap">
-      <canvas id="game" width="800" height="500"></canvas>
+      <canvas id="game" width="480" height="600"></canvas>
+      <div id="topbar">
+        <div id="round-pill"><span id="round-num">1/4</span></div>
+      </div>
       <div id="audio-toggle">
-        <button id="btn-se" class="audio-btn">🔊 SE</button>
-        <button id="btn-bgm" class="audio-btn off">🎵 BGM</button>
+        <button id="btn-pause" class="audio-btn">⏸</button>
+        <button id="btn-se" class="audio-btn">🔊</button>
+        <button id="btn-bgm" class="audio-btn off">🎵</button>
       </div>
     </div>
 
     <div id="hud">
-      <div id="weapons">
-        <button class="weapon" data-weapon="sword">
-          <span class="key">1</span>
-          <span class="icon">⚔</span>
-          <span class="label">剣</span>
-          <span class="cost">AP1</span>
+      <div id="bars">
+        <div class="bar-row">
+          <span class="bar-label">HP</span>
+          <div class="bar hp-bar"><div id="hp-fill"></div><span id="hp-text">120/120</span></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">AP</span>
+          <div id="ap-segments"></div>
+        </div>
+      </div>
+
+      <div id="equipment">
+        <div class="eq-slot rarity-r" data-slot="sword">
+          <span class="eq-icon">⚔</span>
+          <span class="eq-plus">+1</span>
+        </div>
+        <div class="eq-slot rarity-sr" data-slot="spear">
+          <span class="eq-icon">🔱</span>
+          <span class="eq-plus">+2</span>
+        </div>
+        <div class="eq-slot rarity-r" data-slot="hammer">
+          <span class="eq-icon">🔨</span>
+          <span class="eq-plus">+1</span>
+        </div>
+      </div>
+
+      <div id="action-row">
+        <button class="move-btn" data-weapon="sword">
+          <div class="move-current">
+            <span class="ap-cost">2</span>
+            <span class="cur-name">斬り上げ</span>
+          </div>
+          <div class="move-next">
+            <span class="next-label">NEXT</span>
+            <span class="next-ap">3</span>
+            <span class="next-name">ブリ斬</span>
+          </div>
         </button>
-        <button class="weapon" data-weapon="spear">
-          <span class="key">2</span>
-          <span class="icon">🔱</span>
-          <span class="label">槍</span>
-          <span class="cost">AP1</span>
+        <button class="move-btn" data-weapon="spear">
+          <div class="move-current">
+            <span class="ap-cost">1</span>
+            <span class="cur-name">シャベリン</span>
+          </div>
+          <div class="move-next">
+            <span class="next-label">NEXT</span>
+            <span class="next-ap">2</span>
+            <span class="next-name">キック</span>
+          </div>
         </button>
-        <button class="weapon" data-weapon="hammer">
-          <span class="key">3</span>
-          <span class="icon">🔨</span>
-          <span class="label">ハンマー</span>
-          <span class="cost">AP1</span>
+        <button class="move-btn" data-weapon="hammer">
+          <div class="move-current">
+            <span class="ap-cost">2</span>
+            <span class="cur-name">ふっとばし</span>
+          </div>
+          <div class="move-next">
+            <span class="next-label">NEXT</span>
+            <span class="next-ap">3</span>
+            <span class="next-name">大地砕</span>
+          </div>
         </button>
-        <button id="shield">
-          <span class="key">SPACE</span>
-          <span class="icon">🛡</span>
-          <span class="label">ガード</span>
-        </button>
+        <div class="action-side">
+          <button id="shield" class="side-btn">
+            <span class="side-icon">🛡</span>
+            <span class="side-label">ガード</span>
+          </button>
+          <button id="meat" class="side-btn">
+            <span class="side-icon">🍖</span>
+            <span class="side-count" id="meat-count">×2</span>
+          </button>
+        </div>
       </div>
     </div>
 
