@@ -194,41 +194,94 @@ function injectWeaponIcons() {
 }
 
 const ENEMIES = {
-  ghost:    { name: 'ゴースト',     hp: 50,  weak: 'sword',  atkDmg: 9,  atk: [2.0, 3.0], color: '#c8d0ff', accent: '#fff', size: 0.9 },
-  slime:    { name: 'スライム',     hp: 40,  weak: 'spear',  atkDmg: 7,  atk: [1.4, 2.4], color: '#5cf',    accent: '#fff', size: 0.8 },
-  boarRed:  { name: 'すっころび',   hp: 65,  weak: 'hammer', atkDmg: 11, atk: [1.8, 2.6], color: '#d24850', accent: '#fff8c0', size: 0.95 },
-  boarBlue: { name: 'こおりむし',   hp: 75,  weak: 'sword',  atkDmg: 12, atk: [2.0, 3.0], color: '#3a8fd6', accent: '#bfe8ff', size: 0.95 },
-  fabit:    { name: 'ファビット',   hp: 55,  weak: 'spear',  atkDmg: 10, atk: [1.6, 2.4], color: '#f0c8d0', accent: '#fff', size: 0.85 },
-  dragon:   { name: 'ドラゴン',     hp: 130, weak: 'spear',  atkDmg: 15, atk: [2.4, 3.4], color: '#d62828', accent: '#ffce5a', size: 1.05 },
-  golem:    { name: 'ゴーレム',     hp: 160, weak: 'hammer', atkDmg: 17, atk: [2.6, 3.8], color: '#9aa0a8', accent: '#5a5f6b', size: 1.1 },
+  // Tier 1
+  slime:    { name: 'スライム',     hp: 40,  weak: 'spear',  atkDmg: 7,  atk: [1.4, 2.4], color: '#5cf',    accent: '#fff',    size: 0.8 },
+  ghost:    { name: 'ゴースト',     hp: 50,  weak: 'sword',  atkDmg: 9,  atk: [2.0, 3.0], color: '#c8d0ff', accent: '#fff',    size: 0.9 },
+  fabit:    { name: 'ファビット',   hp: 55,  weak: 'spear',  atkDmg: 10, atk: [1.6, 2.4], color: '#f0c8d0', accent: '#fff',    size: 0.85 },
+  mushroom: { name: 'キノコ',       hp: 60,  weak: 'spear',  atkDmg: 9,  atk: [1.6, 2.6], color: '#e85a4a', accent: '#fff8e0', size: 0.85 },
+  // Tier 2
+  boarRed:  { name: 'すっころび',   hp: 70,  weak: 'hammer', atkDmg: 11, atk: [1.8, 2.6], color: '#d24850', accent: '#fff8c0', size: 0.95 },
+  boarBlue: { name: 'こおりむし',   hp: 80,  weak: 'sword',  atkDmg: 12, atk: [2.0, 3.0], color: '#3a8fd6', accent: '#bfe8ff', size: 0.95 },
+  mermaid:  { name: 'マーメイド',   hp: 75,  weak: 'sword',  atkDmg: 11, atk: [1.6, 2.4], color: '#4ad6c0', accent: '#ffd8a0', size: 0.9 },
+  turtle:   { name: 'カメ',         hp: 110, weak: 'hammer', atkDmg: 12, atk: [2.4, 3.4], color: '#5a8a3a', accent: '#a06030', size: 0.95 },
+  // Bosses
+  dragon:    { name: 'ドラゴン',     hp: 130, weak: 'spear',  atkDmg: 15, atk: [2.4, 3.4], color: '#d62828', accent: '#ffce5a', size: 1.05 },
+  kingDrag:  { name: 'キングドラゴン', hp: 220, weak: 'spear',  atkDmg: 18, atk: [2.4, 3.6], color: '#c020e0', accent: '#ffce5a', size: 1.2 },
+  golem:     { name: 'ゴーレム',     hp: 160, weak: 'hammer', atkDmg: 17, atk: [2.6, 3.8], color: '#9aa0a8', accent: '#5a5f6b', size: 1.1 },
+  rockGolem: { name: 'ロックゴーレム', hp: 240, weak: 'hammer', atkDmg: 20, atk: [2.8, 4.0], color: '#7a4a30', accent: '#3a2a1a', size: 1.2 },
 };
 
 const STAGES = [
   {
     name: 'はじまりの森',
     rounds: [
+      ['slime', 'slime'],
       ['ghost', 'slime'],
       ['fabit', 'fabit'],
-      ['boarRed', 'slime', 'ghost'],
-      ['boarRed', 'boarBlue'],
+      ['ghost', 'fabit', 'slime'],
+    ],
+  },
+  {
+    name: 'ワクテッカ草原',
+    rounds: [
+      ['fabit', 'mushroom'],
+      ['fabit', 'fabit', 'mushroom'],
+      ['mushroom', 'mushroom'],
+      ['boarRed', 'fabit'],
+    ],
+  },
+  {
+    name: 'チャップビーチ',
+    rounds: [
+      ['mermaid', 'slime'],
+      ['mermaid', 'mermaid'],
+      ['turtle', 'slime'],
+      ['mermaid', 'turtle'],
+    ],
+  },
+  {
+    name: 'グリニアの森',
+    rounds: [
+      ['ghost', 'fabit', 'mushroom'],
+      ['boarRed', 'mushroom', 'fabit'],
+      ['ghost', 'ghost', 'ghost'],
+      ['boarRed', 'boarRed', 'mushroom'],
     ],
   },
   {
     name: '凍てつく谷',
     rounds: [
       ['boarBlue', 'boarBlue'],
-      ['fabit', 'boarRed', 'boarBlue'],
-      ['boarBlue', 'boarBlue', 'slime'],
+      ['fabit', 'boarBlue', 'mermaid'],
+      ['boarBlue', 'turtle'],
       ['dragon'],
+    ],
+  },
+  {
+    name: 'アーチッチ火山',
+    rounds: [
+      ['boarRed', 'mushroom', 'mushroom'],
+      ['boarRed', 'boarRed'],
+      ['mushroom', 'mushroom', 'boarRed'],
+      ['dragon', 'mushroom'],
+    ],
+  },
+  {
+    name: '竜のねぐら',
+    rounds: [
+      ['dragon', 'fabit'],
+      ['dragon', 'dragon'],
+      ['boarRed', 'boarBlue', 'dragon'],
+      ['kingDrag'],
     ],
   },
   {
     name: '魔王城',
     rounds: [
-      ['boarRed', 'boarBlue', 'fabit'],
-      ['ghost', 'ghost', 'ghost'],
-      ['dragon', 'boarBlue'],
-      ['golem'],
+      ['ghost', 'ghost', 'turtle'],
+      ['boarBlue', 'turtle', 'mermaid'],
+      ['golem', 'mushroom'],
+      ['rockGolem'],
     ],
   },
 ];
@@ -251,6 +304,38 @@ let shake = 0;
 const SAVE_KEY = 'kishidora_save_v2';
 const TYPE_NAMES = { sword: '剣', spear: '槍', hammer: 'ハンマー', shield: '盾' };
 const ITEM_TYPES = ['sword', 'spear', 'hammer', 'shield'];
+
+// Named items by rarity (drop flavor)
+const ITEM_NAMES = {
+  sword: {
+    common: '鉄の剣',
+    r:      '銀の剣',
+    sr:     '聖騎士の剣',
+    ur:     'エクスカリバー',
+  },
+  spear: {
+    common: '鉄の槍',
+    r:      '銀の槍',
+    sr:     '王家の槍',
+    ur:     'グングニル',
+  },
+  hammer: {
+    common: '鉄のハンマー',
+    r:      '銀のハンマー',
+    sr:     '大戦槌',
+    ur:     'ミョルニル',
+  },
+  shield: {
+    common: '木の盾',
+    r:      '鋼の盾',
+    sr:     '聖盾',
+    ur:     'アイギス',
+  },
+};
+
+function itemName(type, rarity) {
+  return (ITEM_NAMES[type] && ITEM_NAMES[type][rarity]) || TYPE_NAMES[type];
+}
 
 function loadSave() {
   try {
@@ -275,7 +360,13 @@ function loadAndMigrate() {
   const raw = loadSave();
   if (!raw) return null;
   // Already new format
-  if (raw.inventory && raw.equipped) return raw;
+  if (raw.inventory && raw.equipped) {
+    // Backfill names for items saved before naming was introduced
+    for (const item of raw.inventory) {
+      if (!item.name) item.name = itemName(item.type, item.rarity);
+    }
+    return raw;
+  }
   // Old format with state.weapons – migrate
   if (raw.weapons) {
     const inventory = [];
@@ -283,7 +374,8 @@ function loadAndMigrate() {
     let id = 1;
     for (const t of ITEM_TYPES) {
       const w = raw.weapons[t] || { plus: 0, rarity: 'common' };
-      const item = { id: id++, type: t, rarity: w.rarity || 'common', plus: w.plus || 0 };
+      const rarity = w.rarity || 'common';
+      const item = { id: id++, type: t, rarity, plus: w.plus || 0, name: itemName(t, rarity) };
       inventory.push(item);
       equipped[t] = item.id;
     }
@@ -302,7 +394,7 @@ function defaultInventory() {
   const inventory = [];
   const equipped = {};
   for (const t of ITEM_TYPES) {
-    const item = { id: id++, type: t, rarity: 'common', plus: 0 };
+    const item = { id: id++, type: t, rarity: 'common', plus: 0, name: itemName(t, 'common') };
     inventory.push(item);
     equipped[t] = item.id;
   }
@@ -830,7 +922,7 @@ function renderEquippedGrid() {
       <svg class="equip-icon"><use href="#ico-${t}"/></svg>
       <div class="equip-meta">
         <div class="equip-slot-label">${TYPE_NAMES[t]}</div>
-        <div class="equip-name">${item ? `${TYPE_NAMES[t]}` : '未装備'}</div>
+        <div class="equip-name">${item ? (item.name || itemName(t, item.rarity)) : '未装備'}</div>
         ${item ? `<div class="equip-stats"><span class="rarity-tag">${RARITY_LABEL[item.rarity]}</span><span class="plus-tag">+${item.plus}</span></div>` : ''}
       </div>
     `;
@@ -869,6 +961,7 @@ function renderInventoryList() {
       card.className = `inv-item rarity-${item.rarity}${isEquipped ? ' equipped' : ''}`;
       card.innerHTML = `
         <svg><use href="#ico-${t}"/></svg>
+        <div class="inv-name">${item.name || itemName(t, item.rarity)}</div>
         <div class="inv-info">
           <span class="rarity-tag">${RARITY_LABEL[item.rarity]}</span>
           <span class="plus-tag">+${item.plus}</span>
@@ -1005,6 +1098,7 @@ function openChest(idx, cardEl) {
     type,
     rarity: chest.rarity,
     plus: chest.plus,
+    name: itemName(type, chest.rarity),
   };
   state.inventory.push(newItem);
 
@@ -1021,7 +1115,7 @@ function openChest(idx, cardEl) {
   cardEl.classList.add('opened', `rarity-${chest.rarity}`);
   cardEl.innerHTML = `
     <svg class="chest-svg" style="display:block;width:30px;height:42px"><use href="#${iconId}"/></svg>
-    <div class="chest-label">${TYPE_NAMES[type]} +${chest.plus}</div>
+    <div class="chest-label">${newItem.name} +${chest.plus}</div>
     <div class="rarity-tag" style="color:${RARITY_COLOR[chest.rarity]}">${RARITY_LABEL[chest.rarity]}</div>
     ${equippedNote}
   `;
@@ -1562,8 +1656,13 @@ function drawEnemy(e) {
     case 'boarRed':
     case 'boarBlue': drawBoar(cx, cy, c, a, e.type === 'boarBlue'); break;
     case 'fabit': drawFabit(cx, cy, c, a); break;
+    case 'mushroom': drawMushroom(cx, cy, c, a); break;
+    case 'mermaid': drawMermaid(cx, cy, c, a); break;
+    case 'turtle': drawTurtle(cx, cy, c, a); break;
     case 'dragon': drawDragon(cx, cy, c, a); break;
+    case 'kingDrag': drawDragon(cx, cy, c, a); break;
     case 'golem': drawGolem(cx, cy, c, a); break;
+    case 'rockGolem': drawGolem(cx, cy, c, a); break;
   }
 
   if (e.stunned) {
@@ -1693,6 +1792,80 @@ function drawFabit(cx, cy, c, a) {
   px(cx + 6, cy + 10, c, 8, 8);
   // Tail
   px(cx - 20, cy - 4, '#fff', 4, 6);
+}
+
+function drawMushroom(cx, cy, c, a) {
+  // Cap
+  px(cx - 16, cy - 22, c, 32, 12);
+  px(cx - 20, cy - 18, c, 40, 12);
+  px(cx - 22, cy - 12, c, 44, 6);
+  // White spots on cap
+  px(cx - 12, cy - 18, '#fff', 4, 4);
+  px(cx + 0, cy - 16, '#fff', 4, 4);
+  px(cx + 10, cy - 14, '#fff', 4, 4);
+  px(cx - 6, cy - 22, '#fff', 4, 4);
+  // Stem
+  px(cx - 10, cy - 6, a, 20, 18);
+  px(cx - 8, cy - 6, '#fff', 16, 16);
+  // Eyes
+  px(cx - 4, cy + 2, '#000', 3, 4);
+  px(cx + 1, cy + 2, '#000', 3, 4);
+  // Smile
+  px(cx - 3, cy + 8, '#000', 6, 2);
+  // Roots
+  px(cx - 10, cy + 14, a, 8, 4);
+  px(cx + 2, cy + 14, a, 8, 4);
+}
+
+function drawMermaid(cx, cy, c, a) {
+  // Hair (warm/peach)
+  px(cx - 12, cy - 32, a, 24, 10);
+  px(cx - 14, cy - 28, a, 28, 10);
+  // Head
+  px(cx - 8, cy - 24, '#ffd9b3', 16, 14);
+  px(cx - 4, cy - 20, '#000', 3, 3);
+  px(cx + 1, cy - 20, '#000', 3, 3);
+  px(cx - 2, cy - 14, '#c34', 4, 2);
+  // Top
+  px(cx - 10, cy - 10, c, 20, 6);
+  px(cx - 12, cy - 8, c, 24, 8);
+  // Tail (fish)
+  px(cx - 10, cy + 0, c, 20, 14);
+  px(cx - 14, cy + 4, c, 28, 10);
+  // Tail fin
+  px(cx - 18, cy + 14, c, 14, 6);
+  px(cx + 4, cy + 14, c, 14, 6);
+  px(cx - 22, cy + 18, c, 10, 4);
+  px(cx + 12, cy + 18, c, 10, 4);
+  // Scales detail
+  px(cx - 6, cy + 4, '#fff', 2, 2);
+  px(cx + 4, cy + 4, '#fff', 2, 2);
+  px(cx - 2, cy + 10, '#fff', 2, 2);
+}
+
+function drawTurtle(cx, cy, c, a) {
+  // Shell (bottom layer)
+  px(cx - 22, cy - 12, a, 44, 28);
+  px(cx - 26, cy - 4, a, 52, 16);
+  // Shell pattern
+  px(cx - 18, cy - 8, c, 36, 18);
+  px(cx - 14, cy - 4, c, 28, 10);
+  // Hex segments
+  px(cx - 10, cy - 6, '#3a5818', 4, 4);
+  px(cx - 2, cy - 6, '#3a5818', 4, 4);
+  px(cx + 6, cy - 6, '#3a5818', 4, 4);
+  px(cx - 6, cy + 0, '#3a5818', 4, 4);
+  px(cx + 2, cy + 0, '#3a5818', 4, 4);
+  // Head
+  px(cx + 18, cy - 4, c, 12, 12);
+  px(cx + 26, cy - 2, c, 6, 8);
+  // Eye
+  px(cx + 28, cy + 0, '#000', 2, 2);
+  // Legs
+  px(cx - 18, cy + 14, c, 8, 6);
+  px(cx + 10, cy + 14, c, 8, 6);
+  // Tail
+  px(cx - 26, cy - 2, c, 4, 6);
 }
 
 function drawDragon(cx, cy, c, a) {

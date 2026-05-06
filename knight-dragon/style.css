@@ -962,6 +962,19 @@ html, body {
 .inv-item.rarity-sr .rarity-tag     { color: #d090ff; }
 .inv-item.rarity-ur .rarity-tag     { color: #ffd066; }
 
+.inv-item .inv-name {
+  font-size: 10px;
+  font-weight: bold;
+  color: #ffe0a0;
+  text-shadow: 1px 1px 0 #000;
+  text-align: center;
+  line-height: 1.1;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .inv-item .inv-info {
   display: flex;
   gap: 4px;
