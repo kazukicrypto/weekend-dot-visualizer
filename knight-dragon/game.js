@@ -1054,35 +1054,58 @@ function startStage(idx) {
 // ============================================================
 function showResultScreen() {
   state.scene = 'result';
-  const screen = document.getElementById('result-screen');
+  hideAllScreens();
+  document.getElementById('result-screen').classList.remove('hidden');
+
   const stageName = document.getElementById('result-stage-name');
   const grid = document.getElementById('chest-grid');
+  const nextBtn = document.getElementById('result-next');
 
   stageName.textContent = `${STAGES[state.stageIdx].name} クリア!`;
   grid.innerHTML = '';
-
-  if (state.chests.length === 0) {
-    grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#aaa;padding:20px">宝箱なし</p>';
-  }
-
-  state.chests.forEach((chest, i) => {
-    const card = document.createElement('div');
-    card.className = 'chest-card';
-    card.innerHTML = `
-      <svg class="chest-svg"><use href="#ico-chest"/></svg>
-      <div class="chest-label">？？？</div>
-    `;
-    card.addEventListener('click', () => openChest(i, card));
-    grid.appendChild(card);
-  });
 
   // backwards compat: chests may have legacy 'weapon' field
   for (const c of state.chests) {
     if (!c.type && c.weapon) c.type = c.weapon;
   }
 
-  screen.classList.remove('hidden');
-  document.getElementById('stage-select').classList.add('hidden');
+  if (state.chests.length === 0) {
+    grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#aaa;padding:20px">宝箱なし</p>';
+    if (nextBtn) nextBtn.disabled = false;
+    return;
+  }
+
+  // Sort by rarity ascending so easier ones open first
+  state.chests.sort((a, b) => RARITY_RANK[a.rarity] - RARITY_RANK[b.rarity]);
+
+  // Render closed chests with their rarity color visible from the start
+  state.chests.forEach((chest) => {
+    const card = document.createElement('div');
+    card.className = `chest-card rarity-${chest.rarity} pending`;
+    card.innerHTML = `
+      <svg class="chest-svg"><use href="#ico-chest"/></svg>
+      <div class="rarity-tag" style="color:${RARITY_COLOR[chest.rarity]}">${RARITY_LABEL[chest.rarity]}</div>
+    `;
+    grid.appendChild(card);
+  });
+
+  // Disable "next" button while opening
+  if (nextBtn) nextBtn.disabled = true;
+
+  // Auto-open in sequence (lowest rarity first)
+  const interval = 700;
+  let delay = 600;
+  state.chests.forEach((chest, i) => {
+    setTimeout(() => {
+      if (state.scene !== 'result') return;
+      const card = grid.children[i];
+      if (card) openChest(i, card);
+    }, delay);
+    delay += interval;
+  });
+  setTimeout(() => {
+    if (state.scene === 'result' && nextBtn) nextBtn.disabled = false;
+  }, delay);
 }
 
 function openChest(idx, cardEl) {

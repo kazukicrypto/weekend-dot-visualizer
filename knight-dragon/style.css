@@ -593,12 +593,40 @@ html, body {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  cursor: pointer;
-  transition: transform 0.1s;
+  transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
   position: relative;
+  min-height: 92px;
 }
 
-.chest-card:active:not(.opened) { transform: scale(0.95); }
+/* Rarity colors visible BEFORE opening */
+.chest-card.rarity-common { border-color: #aaa; }
+.chest-card.rarity-r      { border-color: #5fb0e8; box-shadow: 0 0 6px rgba(95,176,232,0.45); }
+.chest-card.rarity-sr     { border-color: #d090ff; box-shadow: 0 0 8px rgba(208,144,255,0.55); }
+.chest-card.rarity-ur     { border-color: #ffd066; box-shadow: 0 0 10px rgba(255,208,102,0.7); animation: ur-pulse 1.6s ease-in-out infinite; }
+
+/* Pending (unopened) chest jiggle */
+.chest-card.pending .chest-svg {
+  animation: chest-jiggle 1.4s ease-in-out infinite;
+}
+
+@keyframes chest-jiggle {
+  0%, 100% { transform: rotate(0); }
+  20%      { transform: rotate(-6deg); }
+  40%      { transform: rotate(5deg); }
+  60%      { transform: rotate(-3deg); }
+  80%      { transform: rotate(2deg); }
+}
+
+/* Burst when opening */
+.chest-card.opened {
+  animation: chest-burst 0.4s ease-out;
+}
+
+@keyframes chest-burst {
+  0%   { transform: scale(0.7); }
+  60%  { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
 
 .chest-card .chest-svg {
   width: 40px;
@@ -627,11 +655,6 @@ html, body {
   text-align: center;
 }
 
-.chest-card.opened.rarity-common { border-color: #aaa; }
-.chest-card.opened.rarity-r      { border-color: #5fb0e8; box-shadow: 0 0 8px rgba(95,176,232,0.5); }
-.chest-card.opened.rarity-sr     { border-color: #d090ff; box-shadow: 0 0 10px rgba(208,144,255,0.6); }
-.chest-card.opened.rarity-ur     { border-color: #ffd066; box-shadow: 0 0 12px rgba(255,208,102,0.8); }
-
 .chest-card.opened .rarity-tag {
   font-size: 9px;
   font-weight: 900;
@@ -655,7 +678,8 @@ html, body {
   letter-spacing: 2px;
 }
 
-.big-btn:active { transform: scale(0.97); }
+.big-btn:active:not(:disabled) { transform: scale(0.97); }
+.big-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ===== Main Menu ===== */
 .menu-frame {
