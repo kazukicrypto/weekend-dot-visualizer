@@ -56,6 +56,10 @@ class SoundEngine {
     src.start(t0);
   }
   hit()      { this._tone({ freq: 220, dur: 0.08, vol: 0.18, slide: -120 }); this._noise({ dur: 0.05, vol: 0.06, freq: 800 }); }
+  swordSlash() { this._tone({ freq: 1400, dur: 0.07, vol: 0.14, type: 'sawtooth', slide: -1000 }); this._noise({ dur: 0.05, vol: 0.07, freq: 5500 }); }
+  spearStab()  { this._tone({ freq: 700, dur: 0.05, vol: 0.13, type: 'square', slide: 500 }); this._tone({ freq: 1500, dur: 0.04, vol: 0.08, type: 'sine', delay: 0.04 }); }
+  hammerSmash(){ this._tone({ freq: 80,  dur: 0.22, vol: 0.22, type: 'sawtooth', slide: -30 }); this._noise({ dur: 0.18, vol: 0.13, freq: 220 }); this._tone({ freq: 60, dur: 0.1, vol: 0.15, type: 'triangle', delay: 0.12 }); }
+  drop()       { [659, 880, 1175].forEach((f, i) => this._tone({ freq: f, dur: 0.18, vol: 0.13, type: 'triangle', delay: i * 0.08 })); this._tone({ freq: 1568, dur: 0.4, vol: 0.1, type: 'sine', delay: 0.3 }); }
   weakHit()  { this._tone({ freq: 440, dur: 0.12, vol: 0.16, type: 'square', slide: 200 }); this._tone({ freq: 660, dur: 0.1, vol: 0.1, type: 'triangle', delay: 0.03 }); }
   crit()     { this._tone({ freq: 800, dur: 0.18, vol: 0.18, slide: -500, type: 'sawtooth' }); this._tone({ freq: 600, dur: 0.2, vol: 0.13, type: 'triangle', delay: 0.02 }); this._noise({ dur: 0.1, vol: 0.05, freq: 2000 }); }
   guard()    { this._noise({ dur: 0.08, vol: 0.1, freq: 2500 }); this._tone({ freq: 300, dur: 0.06, vol: 0.08, type: 'square' }); }
@@ -260,6 +264,11 @@ function resetState() {
     weakHintTimer: 0,
     weaponHistory: [],
     weaponQueueIdx: { sword: 0, spear: 0, hammer: 0 },
+    weapons: {
+      sword:  { plus: 1, rarity: 'r' },
+      spear:  { plus: 2, rarity: 'sr' },
+      hammer: { plus: 1, rarity: 'r' },
+    },
     specialFx: null,
     specialFxTimer: 0,
     hitCombo: 0,
@@ -268,6 +277,8 @@ function resetState() {
     paused: false,
     roundTransition: 0,
     showRoundText: 0,
+    dropFx: null,
+    dropFxTimer: 0,
     clouds: makeClouds(),
   };
   spawnRound();
@@ -283,14 +294,14 @@ function makeClouds() {
 }
 
 function createKnight() {
-  return { hp: 180, maxHp: 180, ap: 5, maxAp: 5, apRegen: 0.65, x: 100, y: 250, hitTimer: 0, attackAnim: 0 };
+  return { hp: 180, maxHp: 180, ap: 5, maxAp: 5, apRegen: 0.65, x: 100, y: 420, hitTimer: 0, attackAnim: 0, attackWeapon: null };
 }
 
 function createEnemy(type, slot) {
   const p = ENEMIES[type];
   // Slot positions: 0, 1, 2 (left to right at front)
-  const baseX = 250 + slot * 80;
-  const baseY = 380;
+  const baseX = 250 + slot * 78;
+  const baseY = 420;
   return {
     type, name: p.name, hp: p.hp, maxHp: p.hp,
     weak: p.weak, atkDmg: p.atkDmg, atk: p.atk,
@@ -384,7 +395,8 @@ function attack(weaponKey) {
     return;
   }
   k.ap -= move.ap;
-  k.attackAnim = 0.3;
+  k.attackAnim = weaponKey === 'hammer' ? 0.45 : 0.32;
+  k.attackWeapon = weaponKey;
 
   state.weaponHistory.push(weaponKey);
   if (state.weaponHistory.length > 3) state.weaponHistory.shift();
@@ -410,10 +422,11 @@ function attack(weaponKey) {
   const targets = move.aoe ? aliveEnemies() : [getTarget()].filter(Boolean);
   if (targets.length === 0) { syncHud(); return; }
 
+  const enchant = (state.weapons[weaponKey].plus || 0) * 0.08;
   for (const target of targets) {
     const isWeak = target.weak === weaponKey;
     const crit = target.stunned;
-    const mult = (isWeak ? 1.5 : 1.0) * (crit ? 2 : 1);
+    const mult = (isWeak ? 1.5 : 1.0) * (crit ? 2 : 1) * (1 + enchant);
     const dmg = Math.round(move.dmg * mult);
     target.hp = Math.max(0, target.hp - dmg);
     target.hitTimer = 0.3;
@@ -449,11 +462,13 @@ function attack(weaponKey) {
 
   shake = Math.min(8, shake + (move.aoe ? 6 : 3));
 
-  // Sound
+  // Per-weapon swing sound first, then impact sound
+  if (weaponKey === 'sword') sound.swordSlash();
+  else if (weaponKey === 'spear') sound.spearStab();
+  else sound.hammerSmash();
   const firstTarget = targets[0];
   if (firstTarget && firstTarget.stunned) sound.crit();
   else if (firstTarget && firstTarget.weak === weaponKey) sound.weakHit();
-  else sound.hit();
 
   // Show move name floating
   addFloat(move.name, k.x + 40, k.y - 80, weapon.color, 0.7, 14);
@@ -581,6 +596,11 @@ function onEnemyAttackLand(e) {
 }
 
 function onRoundClear() {
+  // Drop chance per round clear
+  if (Math.random() < 0.65) {
+    setTimeout(() => { if (state.scene === 'battle') dropWeapon(); }, 350);
+  }
+
   state.roundIdx++;
   const stage = STAGES[state.stageIdx];
   if (state.roundIdx >= stage.rounds.length) {
@@ -593,13 +613,54 @@ function onRoundClear() {
     addFloat(`${STAGES[state.stageIdx].name}`, W / 2, 200, '#ffd066', 2.0, 22);
     state.knight.hp = state.knight.maxHp;
     state.meatCount = Math.min(2, state.meatCount + 1);
+    // Stage-clear bonus drop (always)
+    setTimeout(() => { if (state.scene === 'battle') dropWeapon(true); }, 600);
   }
   state.roundTransition = 1.0;
   setTimeout(() => {
     if (state.scene !== 'battle') return;
     spawnRound();
     syncHud();
-  }, 900);
+  }, 1100);
+}
+
+const RARITY_RANK = { common: 0, r: 1, sr: 2, ur: 3 };
+const RARITY_COLOR = { common: '#dddddd', r: '#5fb0e8', sr: '#d090ff', ur: '#ffd066' };
+const RARITY_LABEL = { common: 'コモン', r: 'レア', sr: 'SR', ur: 'UR' };
+
+function rollDrop(forceHigh) {
+  const r = Math.random();
+  if (forceHigh) {
+    if (r < 0.15) return { rarity: 'ur', plus: 5 };
+    if (r < 0.45) return { rarity: 'sr', plus: 3 };
+    return { rarity: 'r', plus: 2 };
+  }
+  if (r < 0.04) return { rarity: 'ur', plus: 4 };
+  if (r < 0.16) return { rarity: 'sr', plus: 3 };
+  if (r < 0.45) return { rarity: 'r', plus: 2 };
+  return { rarity: 'common', plus: 1 };
+}
+
+function dropWeapon(forceHigh) {
+  const keys = ['sword', 'spear', 'hammer'];
+  const target = keys[Math.floor(Math.random() * 3)];
+  const drop = rollDrop(forceHigh);
+  const ws = state.weapons[target];
+  ws.plus = (ws.plus || 0) + drop.plus;
+  if (RARITY_RANK[drop.rarity] > (RARITY_RANK[ws.rarity] || -1)) {
+    ws.rarity = drop.rarity;
+  }
+  sound.drop();
+  state.dropFx = {
+    weapon: target,
+    weaponName: WEAPONS[target].name,
+    rarity: drop.rarity,
+    plus: drop.plus,
+    color: RARITY_COLOR[drop.rarity],
+    label: RARITY_LABEL[drop.rarity],
+  };
+  state.dropFxTimer = 2.4;
+  syncHud();
 }
 
 function onVictory() {
@@ -677,6 +738,17 @@ function syncHud() {
     rn.textContent = `${state.roundIdx + 1}/${stage.rounds.length}`;
   }
 
+  // Equipment slots (rarity + plus)
+  for (const wKey of ['sword', 'spear', 'hammer']) {
+    const slot = document.querySelector(`.weapon-col[data-weapon="${wKey}"] .eq-slot`);
+    if (!slot) continue;
+    const ws = state.weapons[wKey];
+    slot.classList.remove('rarity-common', 'rarity-r', 'rarity-sr', 'rarity-ur');
+    slot.classList.add(`rarity-${ws.rarity || 'common'}`);
+    const plusEl = slot.querySelector('.eq-plus');
+    if (plusEl) plusEl.textContent = `+${ws.plus || 0}`;
+  }
+
   // Meat count
   const mc = document.getElementById('meat-count');
   if (mc) mc.textContent = `×${state.meatCount}`;
@@ -695,6 +767,10 @@ function update(dt) {
   if (state.specialFxTimer > 0) {
     state.specialFxTimer -= dt;
     if (state.specialFxTimer <= 0) state.specialFx = null;
+  }
+  if (state.dropFxTimer > 0) {
+    state.dropFxTimer -= dt;
+    if (state.dropFxTimer <= 0) state.dropFx = null;
   }
   if (state.hitComboTimer > 0) {
     state.hitComboTimer -= dt;
@@ -720,7 +796,10 @@ function update(dt) {
   if (state.scene !== 'battle' || state.paused) return;
   const k = state.knight;
   if (k.hitTimer > 0) k.hitTimer -= dt;
-  if (k.attackAnim > 0) k.attackAnim -= dt;
+  if (k.attackAnim > 0) {
+    k.attackAnim -= dt;
+    if (k.attackAnim <= 0) k.attackWeapon = null;
+  }
   if (k.ap < k.maxAp) k.ap = Math.min(k.maxAp, k.ap + k.apRegen * dt);
 
   for (const e of state.enemies) {
@@ -769,6 +848,7 @@ function render() {
   drawTargetReticle();
 
   if (state.specialFx) drawSpecialFx();
+  if (state.dropFx) drawDropFx();
 
   drawHitCombo();
   drawRoundText();
@@ -803,29 +883,31 @@ function render() {
 }
 
 function drawBackground() {
-  // Sky gradient
-  const g = ctx.createLinearGradient(0, 0, 0, H * 0.65);
+  const horizonY = H * 0.5;
+
+  // Sky gradient (top half)
+  const g = ctx.createLinearGradient(0, 0, 0, horizonY);
   g.addColorStop(0, '#5a8acc');
   g.addColorStop(0.6, '#a4c8e8');
   g.addColorStop(1, '#e8d8e8');
   ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H * 0.65);
+  ctx.fillRect(0, 0, W, horizonY);
 
   // Distant clouds
   for (const c of state.clouds) {
+    if (c.y > horizonY - 10) continue;
     ctx.fillStyle = 'rgba(255,255,255,0.7)';
     drawPixelCloud(c.x, c.y, c.size);
   }
 
-  // Mid mountains
+  // Mountains at horizon
   ctx.fillStyle = '#7090b8';
   for (let i = 0; i < 6; i++) {
     const mx = i * 90 - 30;
-    const my = H * 0.55;
     ctx.beginPath();
-    ctx.moveTo(mx, my);
-    ctx.lineTo(mx + 50, my - 60);
-    ctx.lineTo(mx + 100, my);
+    ctx.moveTo(mx, horizonY);
+    ctx.lineTo(mx + 50, horizonY - 50);
+    ctx.lineTo(mx + 100, horizonY);
     ctx.closePath();
     ctx.fill();
   }
@@ -833,42 +915,41 @@ function drawBackground() {
   ctx.fillStyle = '#dbe8f4';
   for (let i = 0; i < 6; i++) {
     const mx = i * 90 - 30;
-    const my = H * 0.55;
     ctx.beginPath();
-    ctx.moveTo(mx + 38, my - 45);
-    ctx.lineTo(mx + 50, my - 60);
-    ctx.lineTo(mx + 62, my - 45);
+    ctx.moveTo(mx + 38, horizonY - 38);
+    ctx.lineTo(mx + 50, horizonY - 50);
+    ctx.lineTo(mx + 62, horizonY - 38);
     ctx.closePath();
     ctx.fill();
   }
 
-  // Ground
-  const gg = ctx.createLinearGradient(0, H * 0.65, 0, H);
+  // Ground (lower half - more action area)
+  const gg = ctx.createLinearGradient(0, horizonY, 0, H);
   gg.addColorStop(0, '#3a8a5a');
   gg.addColorStop(1, '#1a4a2a');
   ctx.fillStyle = gg;
-  ctx.fillRect(0, H * 0.65, W, H);
+  ctx.fillRect(0, horizonY, W, H);
 
-  // Grass tufts
+  // Grass tufts at horizon line
   ctx.fillStyle = '#4a9a6a';
   for (let i = 0; i < W; i += 14) {
     const h = ((i * 37) % 11) + 4;
-    ctx.fillRect(i, H * 0.65, 6, h);
+    ctx.fillRect(i, horizonY, 6, h);
   }
 
-  // Path
+  // Wide path covering most of the lower area
   ctx.fillStyle = '#a08858';
   ctx.beginPath();
-  ctx.moveTo(W * 0.2, H * 0.65);
-  ctx.lineTo(W * 0.85, H * 0.65);
-  ctx.lineTo(W, H * 0.85);
-  ctx.lineTo(0, H * 0.85);
+  ctx.moveTo(W * 0.12, horizonY);
+  ctx.lineTo(W * 0.88, horizonY);
+  ctx.lineTo(W, H);
+  ctx.lineTo(0, H);
   ctx.closePath();
   ctx.fill();
   ctx.fillStyle = '#806838';
   for (let i = 0; i < 20; i++) {
     const x = (i * 24 + state.time * 4) % W;
-    ctx.fillRect(x, H * 0.7 + (i % 3) * 6, 4, 2);
+    ctx.fillRect(x, horizonY + 30 + (i % 3) * 6, 4, 2);
   }
 }
 
@@ -887,10 +968,26 @@ function px(x, y, c, w = 4, h = 4) {
 function drawKnight(k) {
   const flash = k.hitTimer > 0 && Math.floor(k.hitTimer * 20) % 2 === 0;
   const guardUp = state.time < state.shieldUntil;
-  const atkLunge = k.attackAnim > 0 ? Math.sin(k.attackAnim / 0.3 * Math.PI) * 14 : 0;
+
+  // Per-weapon lunge
+  let lungeX = 0, lungeY = 0, atkPhase = 0;
+  if (k.attackAnim > 0) {
+    const dur = k.attackWeapon === 'hammer' ? 0.45 : 0.32;
+    atkPhase = 1 - k.attackAnim / dur;
+    if (k.attackWeapon === 'sword') {
+      lungeX = Math.sin(atkPhase * Math.PI) * 16;
+    } else if (k.attackWeapon === 'spear') {
+      lungeX = Math.sin(atkPhase * Math.PI) * 26;
+    } else if (k.attackWeapon === 'hammer') {
+      // Wind-up back, then forward smash
+      lungeX = atkPhase < 0.5 ? -atkPhase * 14 : (atkPhase - 0.5) * 30;
+      lungeY = atkPhase < 0.5 ? -atkPhase * 6 : 0;
+    }
+  }
+
   const idleBob = Math.sin(state.time * 2.5) * 1;
-  const x = k.x + atkLunge;
-  const y = k.y + idleBob;
+  const x = k.x + lungeX;
+  const y = k.y + idleBob + lungeY;
 
   // Shadow
   ctx.fillStyle = 'rgba(0,0,0,0.4)';
@@ -958,16 +1055,106 @@ function drawKnight(k) {
     px(x + 20, y - 4, '#806030', 8, 6);
   }
 
-  // Attack-anim slash effect
-  if (k.attackAnim > 0) {
-    const a = k.attackAnim / 0.3;
-    ctx.globalAlpha = a;
-    ctx.fillStyle = '#fff';
-    for (let i = 0; i < 4; i++) {
-      px(x + 30 + i * 6, y - 30 + i * 4, '#fff', 4, 4);
-    }
-    ctx.globalAlpha = 1;
+  // Per-weapon slash effect
+  if (k.attackAnim > 0 && k.attackWeapon) {
+    drawAttackEffect(x, y, k.attackWeapon, atkPhase);
   }
+}
+
+function drawAttackEffect(x, y, weapon, phase) {
+  const fadeIn = Math.min(1, phase * 4);
+  const fadeOut = Math.max(0, (1 - phase) * 1.6);
+  const alpha = Math.min(fadeIn, fadeOut, 1);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  if (weapon === 'sword') {
+    // Slashing arc (downward swing, in front of knight)
+    const sweepStart = -Math.PI / 2.4;
+    const sweep = Math.PI * 0.85;
+    const a0 = sweepStart;
+    const a1 = sweepStart + sweep * Math.min(1, phase * 1.6);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 7;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(x + 26, y - 4, 28, a0, a1);
+    ctx.stroke();
+    ctx.strokeStyle = '#7be0ff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(x + 26, y - 4, 33, a0, a1);
+    ctx.stroke();
+    // Sparks at the tip
+    for (let i = 0; i < 4; i++) {
+      const r = 28 + Math.random() * 8;
+      const ang = a1 - Math.random() * 0.4;
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(x + 26 + Math.cos(ang) * r - 2, y - 4 + Math.sin(ang) * r - 2, 4, 4);
+    }
+  } else if (weapon === 'spear') {
+    // Forward thrust line
+    const dist = phase * 70;
+    ctx.fillStyle = '#ffd066';
+    ctx.fillRect(x + 18, y - 6, dist, 4);
+    // Tip
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(x + 18 + dist - 4, y - 9, 8, 10);
+    // Wind trail
+    for (let i = 0; i < 4; i++) {
+      ctx.globalAlpha = alpha * (0.45 - i * 0.1);
+      ctx.fillStyle = '#ffe080';
+      ctx.fillRect(x + 18 + dist - i * 10 - 4, y - 4, 4, 2);
+      ctx.fillRect(x + 18 + dist - i * 10 - 4, y, 4, 2);
+    }
+    ctx.globalAlpha = alpha;
+  } else if (weapon === 'hammer') {
+    if (phase < 0.5) {
+      // Wind-up: hammer arcing overhead from back to front
+      const swing = phase * 2;
+      const ang = -Math.PI * 0.9 + swing * Math.PI * 0.95;
+      const hx = x + 14 + Math.cos(ang) * 36;
+      const hy = y - 8 + Math.sin(ang) * 36;
+      ctx.fillStyle = '#cc8855';
+      ctx.fillRect(hx - 8, hy - 8, 16, 12);
+      ctx.fillStyle = '#a06030';
+      ctx.fillRect(hx - 8, hy + 2, 16, 2);
+      // Trail arc
+      ctx.strokeStyle = 'rgba(255,200,140,0.4)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(x + 14, y - 8, 36, -Math.PI * 0.9, ang);
+      ctx.stroke();
+    } else {
+      const sp = (phase - 0.5) * 2;
+      // Hammer slammed down in front of knight
+      ctx.fillStyle = '#cc8855';
+      ctx.fillRect(x + 22, y, 18, 14);
+      ctx.fillStyle = '#a06030';
+      ctx.fillRect(x + 22, y + 12, 18, 2);
+      // Shockwave rings
+      for (let i = 0; i < 3; i++) {
+        const r = sp * 60 + i * 10;
+        const ringAlpha = alpha * Math.max(0, 1 - sp - i * 0.25);
+        if (ringAlpha <= 0) continue;
+        ctx.globalAlpha = ringAlpha;
+        ctx.strokeStyle = '#ffd066';
+        ctx.lineWidth = 4 - i;
+        ctx.beginPath();
+        ctx.ellipse(x + 30, y + 14, r, r * 0.32, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      // Dust kicks
+      ctx.globalAlpha = alpha * (1 - sp);
+      ctx.fillStyle = '#a08858';
+      for (let i = 0; i < 6; i++) {
+        const a2 = i * Math.PI * 2 / 6 + phase * 8;
+        const r = sp * 30;
+        ctx.fillRect(x + 30 + Math.cos(a2) * r - 2, y + 14 + Math.abs(Math.sin(a2)) * 4 - 2, 4, 4);
+      }
+    }
+  }
+  ctx.restore();
 }
 
 function drawEnemy(e) {
@@ -1246,19 +1433,121 @@ function drawTargetReticle() {
 function drawHitCombo() {
   if (state.hitCombo < 2 || state.hitComboTimer <= 0) return;
   const alpha = Math.min(1, state.hitComboTimer);
-  const scale = 1 + Math.max(0, (1.5 - state.hitComboTimer) * 0.5);
+  // Punch-in scale on most recent hit
+  const sinceHit = 1.5 - state.hitComboTimer;
+  const punch = Math.max(0, 1 - sinceHit / 0.18);
+  const scale = 1 + punch * 0.45;
+
+  const cx = 24, cy = 165;
   ctx.save();
-  ctx.translate(80, 130);
+  ctx.translate(cx, cy);
   ctx.scale(scale, scale);
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = '#ffeb3b';
-  ctx.font = 'italic bold 24px sans-serif';
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = '#000';
+
+  // Yellow banner with arrow point on the right
+  const W1 = 100, H1 = 36;
+  const tip = 18;
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.moveTo(-3, -H1 / 2 - 3);
+  ctx.lineTo(W1 + 3, -H1 / 2 - 3);
+  ctx.lineTo(W1 + tip + 3, 0);
+  ctx.lineTo(W1 + 3, H1 / 2 + 3);
+  ctx.lineTo(-3, H1 / 2 + 3);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#ffd066';
+  ctx.beginPath();
+  ctx.moveTo(0, -H1 / 2);
+  ctx.lineTo(W1, -H1 / 2);
+  ctx.lineTo(W1 + tip, 0);
+  ctx.lineTo(W1, H1 / 2);
+  ctx.lineTo(0, H1 / 2);
+  ctx.closePath();
+  ctx.fill();
+  // Inner lighter band
+  ctx.fillStyle = '#fff8a8';
+  ctx.beginPath();
+  ctx.moveTo(4, -H1 / 2 + 4);
+  ctx.lineTo(W1 - 2, -H1 / 2 + 4);
+  ctx.lineTo(W1 + tip - 8, 0);
+  ctx.lineTo(W1 - 2, H1 / 2 - 4);
+  ctx.lineTo(4, H1 / 2 - 4);
+  ctx.closePath();
+  ctx.fill();
+
+  // Number (italic, big, red)
+  ctx.font = 'italic 900 30px sans-serif';
+  ctx.textBaseline = 'middle';
   ctx.textAlign = 'left';
-  const text = `${state.hitCombo} HIT!`;
-  ctx.strokeText(text, 0, 0);
-  ctx.fillText(text, 0, 0);
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = '#fff';
+  const numStr = `${state.hitCombo}`;
+  ctx.strokeText(numStr, 8, 1);
+  ctx.fillStyle = '#d22020';
+  ctx.fillText(numStr, 8, 1);
+  // HIT!
+  ctx.font = 'italic 900 18px sans-serif';
+  const numW = ctx.measureText(numStr).width;
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#fff';
+  ctx.strokeText('HIT!', 14 + numW, 2);
+  ctx.fillStyle = '#3a2410';
+  ctx.fillText('HIT!', 14 + numW, 2);
+
+  ctx.textBaseline = 'alphabetic';
+  ctx.restore();
+}
+
+function drawDropFx() {
+  const fx = state.dropFx;
+  if (!fx) return;
+  const t = state.dropFxTimer;
+  const phase = 1 - t / 2.4;
+  const cx = W / 2;
+  const cy = 200 - phase * 30;
+  const alpha = t > 0.4 ? 1 : t / 0.4;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  // Card frame
+  const cardW = 240, cardH = 80;
+  ctx.fillStyle = '#000';
+  ctx.fillRect(cx - cardW / 2 - 3, cy - cardH / 2 - 3, cardW + 6, cardH + 6);
+  ctx.fillStyle = fx.color;
+  ctx.fillRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH);
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(cx - cardW / 2 + 3, cy - cardH / 2 + 3, cardW - 6, cardH - 6);
+
+  // Sparkle ring
+  for (let i = 0; i < 8; i++) {
+    const ang = i * Math.PI / 4 + state.time * 4;
+    const r = 60 + Math.sin(state.time * 8 + i) * 6;
+    const sx = cx + Math.cos(ang) * r;
+    const sy = cy + Math.sin(ang) * r;
+    ctx.fillStyle = fx.color;
+    ctx.fillRect(sx - 2, sy - 2, 4, 4);
+  }
+
+  // Title
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = fx.color;
+  ctx.fillText('★ NEW EQUIPMENT ★', cx, cy - cardH / 2 + 18);
+
+  // Body
+  ctx.font = 'bold 18px sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#000';
+  const text = `[${fx.label}] ${fx.weaponName} +${fx.plus}`;
+  ctx.strokeText(text, cx, cy + 4);
+  ctx.fillText(text, cx, cy + 4);
+
+  ctx.font = 'bold 11px sans-serif';
+  ctx.fillStyle = '#ffe0a0';
+  ctx.fillText('GET!', cx, cy + cardH / 2 - 8);
+
   ctx.restore();
 }
 
