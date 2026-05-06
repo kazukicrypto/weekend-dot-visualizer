@@ -195,20 +195,20 @@ function injectWeaponIcons() {
 
 const ENEMIES = {
   // Tier 1
-  slime:    { name: 'スライム',     hp: 40,  weak: 'spear',  atkDmg: 7,  atk: [1.4, 2.4], color: '#5cf',    accent: '#fff',    size: 0.8 },
-  ghost:    { name: 'ゴースト',     hp: 50,  weak: 'sword',  atkDmg: 9,  atk: [2.0, 3.0], color: '#c8d0ff', accent: '#fff',    size: 0.9 },
-  fabit:    { name: 'ファビット',   hp: 55,  weak: 'spear',  atkDmg: 10, atk: [1.6, 2.4], color: '#f0c8d0', accent: '#fff',    size: 0.85 },
-  mushroom: { name: 'キノコ',       hp: 60,  weak: 'spear',  atkDmg: 9,  atk: [1.6, 2.6], color: '#e85a4a', accent: '#fff8e0', size: 0.85 },
+  slime:    { name: 'スライム',     hp: 42,  weak: 'spear',  atkDmg: 8,  atk: [1.4, 2.4], color: '#5cf',    accent: '#fff',    size: 0.8 },
+  ghost:    { name: 'ゴースト',     hp: 55,  weak: 'sword',  atkDmg: 10, atk: [1.9, 2.9], color: '#c8d0ff', accent: '#fff',    size: 0.9 },
+  fabit:    { name: 'ファビット',   hp: 58,  weak: 'spear',  atkDmg: 11, atk: [1.6, 2.4], color: '#f0c8d0', accent: '#fff',    size: 0.85 },
+  mushroom: { name: 'キノコ',       hp: 65,  weak: 'spear',  atkDmg: 10, atk: [1.6, 2.6], color: '#e85a4a', accent: '#fff8e0', size: 0.85 },
   // Tier 2
-  boarRed:  { name: 'すっころび',   hp: 70,  weak: 'hammer', atkDmg: 11, atk: [1.8, 2.6], color: '#d24850', accent: '#fff8c0', size: 0.95 },
-  boarBlue: { name: 'こおりむし',   hp: 80,  weak: 'sword',  atkDmg: 12, atk: [2.0, 3.0], color: '#3a8fd6', accent: '#bfe8ff', size: 0.95 },
-  mermaid:  { name: 'マーメイド',   hp: 75,  weak: 'sword',  atkDmg: 11, atk: [1.6, 2.4], color: '#4ad6c0', accent: '#ffd8a0', size: 0.9 },
-  turtle:   { name: 'カメ',         hp: 110, weak: 'hammer', atkDmg: 12, atk: [2.4, 3.4], color: '#5a8a3a', accent: '#a06030', size: 0.95 },
+  boarRed:  { name: 'すっころび',   hp: 90,  weak: 'hammer', atkDmg: 13, atk: [1.8, 2.6], color: '#d24850', accent: '#fff8c0', size: 0.95 },
+  boarBlue: { name: 'こおりむし',   hp: 100, weak: 'sword',  atkDmg: 14, atk: [1.9, 2.7], color: '#3a8fd6', accent: '#bfe8ff', size: 0.95 },
+  mermaid:  { name: 'マーメイド',   hp: 90,  weak: 'sword',  atkDmg: 13, atk: [1.6, 2.4], color: '#4ad6c0', accent: '#ffd8a0', size: 0.9 },
+  turtle:   { name: 'カメ',         hp: 145, weak: 'hammer', atkDmg: 14, atk: [2.4, 3.2], color: '#5a8a3a', accent: '#a06030', size: 0.95 },
   // Bosses
-  dragon:    { name: 'ドラゴン',     hp: 130, weak: 'spear',  atkDmg: 15, atk: [2.4, 3.4], color: '#d62828', accent: '#ffce5a', size: 1.05 },
-  kingDrag:  { name: 'キングドラゴン', hp: 220, weak: 'spear',  atkDmg: 18, atk: [2.4, 3.6], color: '#c020e0', accent: '#ffce5a', size: 1.2 },
-  golem:     { name: 'ゴーレム',     hp: 160, weak: 'hammer', atkDmg: 17, atk: [2.6, 3.8], color: '#9aa0a8', accent: '#5a5f6b', size: 1.1 },
-  rockGolem: { name: 'ロックゴーレム', hp: 240, weak: 'hammer', atkDmg: 20, atk: [2.8, 4.0], color: '#7a4a30', accent: '#3a2a1a', size: 1.2 },
+  dragon:    { name: 'ドラゴン',     hp: 220, weak: 'spear',  atkDmg: 18, atk: [2.2, 3.2], color: '#d62828', accent: '#ffce5a', size: 1.05 },
+  kingDrag:  { name: 'キングドラゴン', hp: 420, weak: 'spear',  atkDmg: 24, atk: [2.0, 3.0], color: '#c020e0', accent: '#ffce5a', size: 1.2 },
+  golem:     { name: 'ゴーレム',     hp: 280, weak: 'hammer', atkDmg: 20, atk: [2.4, 3.4], color: '#9aa0a8', accent: '#5a5f6b', size: 1.1 },
+  rockGolem: { name: 'ロックゴーレム', hp: 540, weak: 'hammer', atkDmg: 28, atk: [2.0, 3.0], color: '#7a4a30', accent: '#3a2a1a', size: 1.2 },
 };
 
 const STAGES = [
@@ -287,11 +287,11 @@ const STAGES = [
 ];
 
 const SPECIAL_MOVES = {
-  'sword,spear,hammer':   { name: '聖騎士奥義', dmg: 70, color: '#ff80ff', hits: 4 },
-  'hammer,spear,sword':   { name: '英雄連舞',   dmg: 60, color: '#ffeb3b', hits: 4 },
-  'sword,sword,sword':    { name: '剣聖斬',     dmg: 45, color: '#7be0ff', hits: 3 },
-  'spear,spear,spear':    { name: '貫穿撃',     dmg: 40, color: '#ffd066', hits: 1 },
-  'hammer,hammer,hammer': { name: '大地砕',     dmg: 55, color: '#cc8855', hits: 1 },
+  'sword,spear,hammer':   { name: '聖騎士奥義', dmg: 56, color: '#ff80ff', hits: 4 },
+  'hammer,spear,sword':   { name: '英雄連舞',   dmg: 48, color: '#ffeb3b', hits: 4 },
+  'sword,sword,sword':    { name: '剣聖斬',     dmg: 36, color: '#7be0ff', hits: 3 },
+  'spear,spear,spear':    { name: '貫穿撃',     dmg: 30, color: '#ffd066', hits: 1 },
+  'hammer,hammer,hammer': { name: '大地砕',     dmg: 42, color: '#cc8855', hits: 1 },
 };
 
 // ============================================================
@@ -461,7 +461,7 @@ function makeClouds() {
 }
 
 function createKnight() {
-  return { hp: 180, maxHp: 180, ap: 5, maxAp: 5, apRegen: 0.65, x: 95, y: 290, hitTimer: 0, attackAnim: 0, attackWeapon: null };
+  return { hp: 200, maxHp: 200, ap: 5, maxAp: 5, apRegen: 0.55, x: 95, y: 290, hitTimer: 0, attackAnim: 0, attackWeapon: null };
 }
 
 function createEnemy(type, slot) {
@@ -595,7 +595,7 @@ function attack(weaponKey) {
   for (const target of targets) {
     const isWeak = target.weak === weaponKey;
     const crit = target.stunned;
-    const mult = (isWeak ? 1.5 : 1.0) * (crit ? 2 : 1) * (1 + enchant);
+    const mult = (isWeak ? 1.4 : 1.0) * (crit ? 1.6 : 1) * (1 + enchant);
     const dmg = Math.round(move.dmg * mult);
     target.hp = Math.max(0, target.hp - dmg);
     target.hitTimer = 0.3;
