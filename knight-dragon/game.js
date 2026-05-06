@@ -133,18 +133,18 @@ const MOVES = {
   sw_strong:   { name: 'ブリ斬',       ap: 3, dmg: 22, pp: 18, type: 'sword' },
   sw_thrust:   { name: 'メガスラスト', ap: 4, dmg: 32, pp: 22, type: 'sword' },
   sw_special:  { name: 'メガブレイク', ap: 5, dmg: 42, pp: 28, type: 'sword' },
-  sw_seven:    { name: 'セブンクロス', ap: 7, dmg: 64, pp: 38, type: 'sword' },
+  sw_seven:    { name: 'セブンクロス', ap: 7, dmg: 64, pp: 38, type: 'sword', slot: 'ult' },
   // Spear 槍 - 5 moves, fast
   sp_jab:      { name: 'シャベリン',   ap: 1, dmg: 5,  pp: 10, type: 'spear' },
   sp_kick:     { name: 'キック',       ap: 2, dmg: 12, pp: 14, type: 'spear' },
   sp_charge:   { name: 'とっしん',     ap: 3, dmg: 22, pp: 22, type: 'spear' },
   sp_sweep:    { name: 'ヤリ払い',     ap: 3, dmg: 18, pp: 16, type: 'spear', aoe: true },
-  sp_dragon:   { name: 'ドラゴン突き', ap: 5, dmg: 42, pp: 28, type: 'spear' },
+  sp_dragon:   { name: 'ドラゴン突き', ap: 5, dmg: 42, pp: 28, type: 'spear', slot: 'ult' },
   // Hammer ハンマー - 4 moves, heavy
   hm_swing:    { name: 'ふっとばし',   ap: 2, dmg: 16, pp: 14, type: 'hammer' },
   hm_smash:    { name: '大地砕き',     ap: 3, dmg: 22, pp: 18, type: 'hammer', aoe: true },
   hm_geki:     { name: '激',           ap: 4, dmg: 34, pp: 24, type: 'hammer' },
-  hm_quake:    { name: '地割れ',       ap: 5, dmg: 44, pp: 30, type: 'hammer', aoe: true },
+  hm_quake:    { name: '地割れ',       ap: 5, dmg: 44, pp: 30, type: 'hammer', aoe: true, slot: 'ult' },
 };
 
 const WEAPONS = {
@@ -460,6 +460,8 @@ function resetState() {
     chests: [],
     pet: createPet(),
     goldenDragon: null,
+    nullifyNext: false,
+    goldRushTimer: 0,
     specialFx: null,
     specialFxTimer: 0,
     hitCombo: 0,
@@ -635,9 +637,10 @@ function petAttack() {
   state.pet.targetY = target.y;
   if (target.hp <= 0 && !target._goldGiven) {
     target._goldGiven = true;
-    const reward = Math.max(2, Math.floor(target.maxHp / 8));
+    const base = Math.max(2, Math.floor(target.maxHp / 8));
+    const reward = state.goldRushTimer > 0 ? base * 2 : base;
     state.gold = (state.gold || 0) + reward;
-    addFloat(`💰+${reward}`, target.x, target.y - 18, '#ffd066', 1.0, 14);
+    addFloat(`💰+${reward}${state.goldRushTimer > 0 ? ' x2' : ''}`, target.x, target.y - 18, '#ffd066', 1.0, 14);
   }
   if (aliveEnemies().length === 0) onRoundClear();
 }
@@ -743,14 +746,46 @@ function attack(weaponKey) {
   const aoeBonus  = (weaponKey === 'hammer' && move.aoe) ? getEffect('hammer', 'aoeBonus') : 0;
   const stunBonus = getEffect('hammer', 'stunBonus'); // passive: extends PIYO duration
 
+  // UR-variant specials triggered on the weapon's "ult" slot
+  const variant = urVariantOf(equipped);
+  const specialOnUlt = (variant && variant.special && move.slot === 'ult') ? variant.special : null;
+  // Per-weapon ultimate triggers
+  if (specialOnUlt === 'nullify' && weaponKey === 'spear') {
+    state.nullifyNext = true;
+    addFloat('傘で防御!', state.knight.x, state.knight.y - 70, '#80c0ff', 1.4, 18);
+    sound.miracle();
+  }
+  if (specialOnUlt === 'goldRush' && weaponKey === 'hammer') {
+    state.goldRushTimer = 8;
+    addFloat('GOLD RUSH!', W / 2, 130, '#ffd066', 1.6, 22);
+    sound.special();
+  }
+
   for (const target of targets) {
     const isWeak = target.weak === weaponKey;
     const luckyCrit = !target.stunned && critBonus > 0 && Math.random() < critBonus;
     const crit = target.stunned || luckyCrit;
     const mult = (isWeak ? 1.4 : 1.0) * (crit ? 1.6 : 1) * (1 + enchant) * (1 + dmgBonus + aoeBonus);
-    const dmg = Math.round(move.dmg * mult);
+    let dmg = Math.round(move.dmg * mult);
+
+    // Death Sign – chance to instakill / boss HP-50%
+    let deathTriggered = false;
+    if (specialOnUlt === 'deathStrike' && weaponKey === 'sword' && Math.random() < 0.25) {
+      deathTriggered = true;
+      if (isBoss(target)) {
+        dmg = Math.max(dmg, Math.ceil(target.hp * 0.5));
+      } else {
+        dmg = target.hp;
+      }
+    }
+
     target.hp = Math.max(0, target.hp - dmg);
     target.hitTimer = 0.3;
+    if (deathTriggered) {
+      addFloat(isBoss(target) ? '死神 -50%' : '即死!', target.x, target.y - 70, '#a040ff', 1.6, 24);
+      shake = Math.min(20, shake + 10);
+      state.flashTimer = 0.4;
+    }
 
     if (!target.stunned) {
       target.pp += move.pp * (isWeak ? 2.6 : 1) * (1 + ppBonus);
@@ -780,9 +815,10 @@ function attack(weaponKey) {
     // Gold drop on kill
     if (target.hp <= 0 && !target._goldGiven) {
       target._goldGiven = true;
-      const reward = Math.max(2, Math.floor(target.maxHp / 8));
+      const base = Math.max(2, Math.floor(target.maxHp / 8));
+      const reward = state.goldRushTimer > 0 ? base * 2 : base;
       state.gold = (state.gold || 0) + reward;
-      addFloat(`💰+${reward}`, target.x, target.y - 18, '#ffd066', 1.0, 14);
+      addFloat(`💰+${reward}${state.goldRushTimer > 0 ? ' x2' : ''}`, target.x, target.y - 18, '#ffd066', 1.0, 14);
     }
   }
 
@@ -835,9 +871,10 @@ function fireSpecial(special) {
         addFloat(`-${perHit}`, en.x + (Math.random() * 30 - 15), en.y - 30 - h * 14, special.color, 0.85, 22);
         if (en.hp <= 0 && !en._goldGiven) {
           en._goldGiven = true;
-          const reward = Math.max(2, Math.floor(en.maxHp / 8));
+          const base = Math.max(2, Math.floor(en.maxHp / 8));
+          const reward = state.goldRushTimer > 0 ? base * 2 : base;
           state.gold = (state.gold || 0) + reward;
-          addFloat(`💰+${reward}`, en.x, en.y - 18, '#ffd066', 1.0, 14);
+          addFloat(`💰+${reward}${state.goldRushTimer > 0 ? ' x2' : ''}`, en.x, en.y - 18, '#ffd066', 1.0, 14);
         }
       }
       shake = Math.min(20, shake + 4);
@@ -883,6 +920,30 @@ function tryGuard() {
   if (dmg > 0) detail += ` -${dmg}`;
   if (hpGain > 0) detail += ` +HP${hpGain}`;
   addFloat(detail, k.x, k.y - 50, color, 1.2, kind === 'MIRACLE' ? 26 : 20);
+
+  // Magic Mirror reflect on JUST / MIRACLE
+  if (kind === 'JUST' || kind === 'MIRACLE') {
+    const shieldVar = urVariantOf(getEquippedItem('shield'));
+    if (shieldVar && shieldVar.special === 'reflect') {
+      const reflectDmg = Math.max(1, Math.round(atkDmg * 0.4));
+      incoming.hp = Math.max(0, incoming.hp - reflectDmg);
+      incoming.hitTimer = 0.3;
+      addFloat(`反射 -${reflectDmg}`, incoming.x, incoming.y - 30, '#80ffff', 1.0, 18);
+      shake = Math.min(14, shake + 4);
+      if (incoming.hp <= 0 && !incoming._goldGiven) {
+        incoming._goldGiven = true;
+        const base = Math.max(2, Math.floor(incoming.maxHp / 8));
+        const reward = state.goldRushTimer > 0 ? base * 2 : base;
+        state.gold = (state.gold || 0) + reward;
+        addFloat(`💰+${reward}`, incoming.x, incoming.y - 18, '#ffd066', 1.0, 14);
+      }
+      if (aliveEnemies().length === 0) {
+        onRoundClear();
+        syncHud();
+        return;
+      }
+    }
+  }
 
   rollEnemyAttack(incoming);
   if (!incoming.stunned) incoming.pp = Math.min(incoming.maxPp, incoming.pp + 12);
@@ -933,6 +994,18 @@ function onEnemyAttackLand(e) {
   const k = state.knight;
   const atk = e.pendingAtk || { name: '攻撃', dmg: e.atkDmg };
   const defBonus = getEffect('shield', 'defBonus');
+
+  // Vinyl Umbrella nullify
+  if (state.nullifyNext) {
+    state.nullifyNext = false;
+    addFloat('NULLIFY!', k.x, k.y - 50, '#80c0ff', 1.4, 22);
+    sound.miracle();
+    rollEnemyAttack(e);
+    state.hitCombo = 0;
+    syncHud();
+    return;
+  }
+
   const finalDmg = Math.max(1, Math.round(atk.dmg * (1 - defBonus)));
   k.hp = Math.max(0, k.hp - finalDmg);
   k.hitTimer = 0.3;
@@ -1032,26 +1105,48 @@ const UR_VARIANTS = {
     { name: 'グラム',           tag: '攻撃特化',   dmgBonus: 0.32, critBonus: 0.12 },
     { name: 'ムラサメ',         tag: '会心特化',   dmgBonus: 0.15, critBonus: 0.32 },
     { name: 'デュランダル',     tag: '聖騎士',     dmgBonus: 0.27, critBonus: 0.27 },
+    { name: 'デスサイン',       tag: '即死',       dmgBonus: 0.18, critBonus: 0.18,
+      special: 'deathStrike',  iconId: 'ur-sword-deathsign',
+      desc: 'セブンクロス時 25%で即死（ボスはHP-50%）' },
   ],
   spear: [
     { name: 'グングニル',       tag: 'バランス',   apRegenBonus: 0.40, ppBonus: 0.32 },
     { name: '飛雷の槍',         tag: 'AP特化',     apRegenBonus: 0.55, ppBonus: 0.20 },
     { name: 'ロンギヌス',       tag: 'PP特化',     apRegenBonus: 0.28, ppBonus: 0.48 },
     { name: '神槍ティルフィング', tag: '神器',     apRegenBonus: 0.46, ppBonus: 0.40 },
+    { name: 'ビニール傘',       tag: '無効化',     apRegenBonus: 0.30, ppBonus: 0.25,
+      special: 'nullify',      iconId: 'ur-spear-umbrella',
+      desc: 'ドラゴン突きで次の敵攻撃を無効化' },
   ],
   hammer: [
     { name: 'ミョルニル',       tag: 'バランス',   aoeBonus: 0.40, stunBonus: 0.55 },
     { name: '雷神槌',           tag: 'AOE特化',    aoeBonus: 0.58, stunBonus: 0.32 },
     { name: '大地砕き槌',       tag: 'PIYO特化',   aoeBonus: 0.25, stunBonus: 0.78 },
     { name: '神鉄槌',           tag: '神器',       aoeBonus: 0.48, stunBonus: 0.62 },
+    { name: 'ゴールデンハンマー', tag: '金運',     aoeBonus: 0.30, stunBonus: 0.40,
+      special: 'goldRush',     iconId: 'ur-hammer-golden',
+      desc: '地割れ時 8秒間ゴールド2倍' },
   ],
   shield: [
     { name: 'アイギス',         tag: 'バランス',   defBonus: 0.30, guardWindow: 0.14 },
     { name: '不壊の盾',         tag: '防御特化',   defBonus: 0.42, guardWindow: 0.10 },
     { name: '見切りの盾',       tag: '猶予特化',   defBonus: 0.24, guardWindow: 0.22 },
     { name: '守護神盾',         tag: '神器',       defBonus: 0.36, guardWindow: 0.18 },
+    { name: 'マジックミラー',   tag: '反射',       defBonus: 0.20, guardWindow: 0.10,
+      special: 'reflect',      iconId: 'ur-shield-mirror',
+      desc: 'JUST/MIRACLEで攻撃を40%反射' },
   ],
 };
+
+const BOSS_TYPES = new Set(['dragon', 'kingDrag', 'golem', 'rockGolem']);
+function isBoss(e) { return e && BOSS_TYPES.has(e.type); }
+
+function getItemIconId(item) {
+  if (!item) return 'ico-sword';
+  const v = urVariantOf(item);
+  if (v && v.iconId) return v.iconId;
+  return 'ico-' + item.type;
+}
 
 function urVariantOf(item) {
   if (!item || item.rarity !== 'ur') return null;
@@ -1121,6 +1216,7 @@ function describeItemEffects(item) {
     if (eff.defBonus)    lines.push({ label: '被ダメ軽減', value: `${Math.round(eff.defBonus * 100)}%` });
     if (eff.guardWindow) lines.push({ label: 'ガード猶予', value: `+${Math.round(eff.guardWindow * 1000)}ms` });
   }
+  if (variant && variant.desc) lines.push({ label: '特殊', value: variant.desc });
   if (item.plus) lines.push({ label: '強化', value: `+${item.plus} 装備` });
   return lines;
 }
@@ -1247,9 +1343,10 @@ function renderEquippedGrid() {
           `<div class="eff-row"><span class="eff-label">${l.label}</span><span class="eff-value">${l.value}</span></div>`
         ).join('')}</div>`
       : '<div class="equip-effects empty">効果なし</div>';
+    const iconId = item ? getItemIconId(item) : ('ico-' + t);
     card.innerHTML = `
       <div class="equip-head">
-        <svg class="equip-icon"><use href="#ico-${t}"/></svg>
+        <svg class="equip-icon"><use href="#${iconId}"/></svg>
         <div class="equip-meta">
           <div class="equip-slot-label">${TYPE_NAMES[t]}</div>
           <div class="equip-name">${item ? (item.name || itemName(t, item.rarity)) : '未装備'}</div>
@@ -1291,8 +1388,9 @@ function renderInventoryList() {
       const isEquipped = state.equipped[t] === item.id;
       const card = document.createElement('button');
       card.className = `inv-item rarity-${item.rarity}${isEquipped ? ' equipped' : ''}`;
+      const invIcon = getItemIconId(item);
       card.innerHTML = `
-        <svg><use href="#ico-${t}"/></svg>
+        <svg><use href="#${invIcon}"/></svg>
         <div class="inv-name">${item.name || itemName(t, item.rarity)}</div>
         <div class="inv-info">
           <span class="rarity-tag">${RARITY_LABEL[item.rarity]}</span>
@@ -1486,6 +1584,8 @@ function startStage(idx) {
   state.paused = false;
   state.goldenDragon = null;
   state.pet = createPet();
+  state.nullifyNext = false;
+  state.goldRushTimer = 0;
   hideAllScreens();
   hideOverlay();
   spawnRound();
@@ -1582,7 +1682,7 @@ function openChest(idx, cardEl) {
 
   saveProgress();
 
-  const iconId = `ico-${type}`;
+  const iconId = getItemIconId(newItem);
   const equippedNote = better ? '<div class="equipped-badge" style="position:relative;top:auto;right:auto;display:inline-block;margin-top:4px">装備!</div>' : '';
   cardEl.classList.add('opened', `rarity-${chest.rarity}`);
   cardEl.innerHTML = `
@@ -1602,12 +1702,15 @@ function openChest(idx, cardEl) {
 function showUrFanfare(item) {
   const fx = document.createElement('div');
   fx.className = 'ur-fanfare';
-  const iconId = `ico-${item.type}`;
+  const iconId = getItemIconId(item);
+  const variant = urVariantOf(item);
+  const tagLine = variant && variant.tag ? `<div class="ur-tag">${variant.tag}</div>` : '';
   fx.innerHTML = `
     <div class="ur-rays"></div>
     <div class="ur-banner">★ UR ★</div>
     <svg class="ur-icon"><use href="#${iconId}"/></svg>
     <div class="ur-name">${item.name}</div>
+    ${tagLine}
     <div class="ur-plus">+${item.plus}</div>
     <div class="ur-sparks">${Array.from({length: 18}, (_, i) => `<span class="ur-spark s${i}"></span>`).join('')}</div>
   `;
@@ -1814,6 +1917,11 @@ function update(dt) {
     if (gd.x > W + 60) state.goldenDragon = null;
   }
 
+  // Gold-rush buff timer
+  if (state.goldRushTimer > 0) {
+    state.goldRushTimer = Math.max(0, state.goldRushTimer - dt);
+  }
+
   syncHud();
 }
 
@@ -1848,6 +1956,7 @@ function render() {
   if (state.specialFx) drawSpecialFx();
 
   drawHitCombo();
+  drawBuffBadges();
   drawRoundText();
   drawComboBar();
 
@@ -2707,6 +2816,32 @@ function drawTargetReticle() {
   ctx.beginPath();
   ctx.arc(x, y, r, 0, Math.PI * 2);
   ctx.stroke();
+}
+
+function drawBuffBadges() {
+  const badges = [];
+  if (state.nullifyNext) badges.push({ label: '🛡 無効化中', color: '#80c0ff', bg: 'rgba(60,90,160,0.85)' });
+  if (state.goldRushTimer > 0) {
+    const remaining = state.goldRushTimer.toFixed(1);
+    badges.push({ label: `💰 GOLD x2  ${remaining}s`, color: '#ffd066', bg: 'rgba(120,80,20,0.85)' });
+  }
+  if (!badges.length) return;
+  const x = W - 12;
+  let y = H - 30;
+  for (const b of badges) {
+    ctx.font = 'bold 12px sans-serif';
+    const w = ctx.measureText(b.label).width + 14;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(x - w - 1, y - 1, w + 2, 22);
+    ctx.fillStyle = b.bg;
+    ctx.fillRect(x - w, y, w, 20);
+    ctx.fillStyle = b.color;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(b.label, x - 6, y + 10);
+    ctx.textBaseline = 'alphabetic';
+    y -= 26;
+  }
 }
 
 function drawHitCombo() {
