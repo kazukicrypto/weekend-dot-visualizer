@@ -528,13 +528,14 @@ html, body {
   inset: 0;
   background: linear-gradient(180deg, #1a1428 0%, #06060a 100%);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   z-index: 15;
   padding: 20px;
   padding-top: max(env(safe-area-inset-top, 12px), 12px);
   padding-bottom: max(env(safe-area-inset-bottom, 12px), 12px);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   height: var(--vh);
   height: 100dvh;
 }
@@ -549,6 +550,7 @@ html, body {
   border-radius: 10px;
   padding: 24px 16px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+  margin: auto 0;
 }
 
 .screen-title {
@@ -579,8 +581,9 @@ html, body {
 #stage-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 6px;
+  margin-top: 8px;
+  margin-bottom: 12px;
 }
 
 .stage-item {
@@ -588,10 +591,10 @@ html, body {
   background: linear-gradient(180deg, #4a3520 0%, #2a1a10 100%);
   border: 2px solid #8b6940;
   border-radius: 8px;
-  padding: 12px 14px;
+  padding: 8px 12px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   color: #fff;
   cursor: pointer;
   transition: transform 0.05s;
@@ -611,9 +614,9 @@ html, body {
   background: #ffd066;
   color: #3a2410;
   font-weight: 900;
-  font-size: 18px;
-  width: 36px;
-  height: 36px;
+  font-size: 16px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
