@@ -128,24 +128,29 @@ const H = canvas.height;  // 600
 // DATA
 // ============================================================
 const MOVES = {
-  // Sword 剣 - 単体高ダメ
+  // Sword 剣 - 5 moves cycling
   sw_swing:    { name: '斬り上げ',     ap: 2, dmg: 14, pp: 14, type: 'sword' },
   sw_strong:   { name: 'ブリ斬',       ap: 3, dmg: 22, pp: 18, type: 'sword' },
-  sw_special:  { name: 'メガブレイク', ap: 3, dmg: 28, pp: 24, type: 'sword' },
-  // Spear 槍 - 低APコスト, 連続
+  sw_thrust:   { name: 'メガスラスト', ap: 4, dmg: 32, pp: 22, type: 'sword' },
+  sw_special:  { name: 'メガブレイク', ap: 5, dmg: 42, pp: 28, type: 'sword' },
+  sw_seven:    { name: 'セブンクロス', ap: 7, dmg: 64, pp: 38, type: 'sword' },
+  // Spear 槍 - 5 moves, fast
   sp_jab:      { name: 'シャベリン',   ap: 1, dmg: 5,  pp: 10, type: 'spear' },
   sp_kick:     { name: 'キック',       ap: 2, dmg: 12, pp: 14, type: 'spear' },
   sp_charge:   { name: 'とっしん',     ap: 3, dmg: 22, pp: 22, type: 'spear' },
-  // Hammer ハンマー - 高ダメ + AOE
+  sp_sweep:    { name: 'ヤリ払い',     ap: 3, dmg: 18, pp: 16, type: 'spear', aoe: true },
+  sp_dragon:   { name: 'ドラゴン突き', ap: 5, dmg: 42, pp: 28, type: 'spear' },
+  // Hammer ハンマー - 4 moves, heavy
   hm_swing:    { name: 'ふっとばし',   ap: 2, dmg: 16, pp: 14, type: 'hammer' },
   hm_smash:    { name: '大地砕き',     ap: 3, dmg: 22, pp: 18, type: 'hammer', aoe: true },
-  hm_geki:     { name: '激',           ap: 3, dmg: 30, pp: 22, type: 'hammer' },
+  hm_geki:     { name: '激',           ap: 4, dmg: 34, pp: 24, type: 'hammer' },
+  hm_quake:    { name: '地割れ',       ap: 5, dmg: 44, pp: 30, type: 'hammer', aoe: true },
 };
 
 const WEAPONS = {
-  sword:  { name: '剣',       icon: '⚔', color: '#7be0ff', moves: ['sw_swing', 'sw_strong', 'sw_special'] },
-  spear:  { name: '槍',       icon: '🔱', color: '#ffd066', moves: ['sp_jab', 'sp_kick', 'sp_charge'] },
-  hammer: { name: 'ハンマー', icon: '🔨', color: '#cc8855', moves: ['hm_swing', 'hm_smash', 'hm_geki'] },
+  sword:  { name: '剣',       icon: '⚔', color: '#7be0ff', moves: ['sw_swing', 'sw_strong', 'sw_thrust', 'sw_special', 'sw_seven'] },
+  spear:  { name: '槍',       icon: '🔱', color: '#ffd066', moves: ['sp_jab', 'sp_kick', 'sp_charge', 'sp_sweep', 'sp_dragon'] },
+  hammer: { name: 'ハンマー', icon: '🔨', color: '#cc8855', moves: ['hm_swing', 'hm_smash', 'hm_geki', 'hm_quake'] },
 };
 
 // ============================================================
@@ -204,11 +209,15 @@ const ENEMIES = {
   boarBlue: { name: 'こおりむし',   hp: 100, weak: 'sword',  atkDmg: 14, atk: [1.9, 2.7], color: '#3a8fd6', accent: '#bfe8ff', size: 0.95 },
   mermaid:  { name: 'マーメイド',   hp: 90,  weak: 'sword',  atkDmg: 13, atk: [1.6, 2.4], color: '#4ad6c0', accent: '#ffd8a0', size: 0.9 },
   turtle:   { name: 'カメ',         hp: 145, weak: 'hammer', atkDmg: 14, atk: [2.4, 3.2], color: '#5a8a3a', accent: '#a06030', size: 0.95 },
-  // Bosses
-  dragon:    { name: 'ドラゴン',     hp: 220, weak: 'spear',  atkDmg: 18, atk: [2.2, 3.2], color: '#d62828', accent: '#ffce5a', size: 1.05 },
-  kingDrag:  { name: 'キングドラゴン', hp: 420, weak: 'spear',  atkDmg: 24, atk: [2.0, 3.0], color: '#c020e0', accent: '#ffce5a', size: 1.2 },
-  golem:     { name: 'ゴーレム',     hp: 280, weak: 'hammer', atkDmg: 20, atk: [2.4, 3.4], color: '#9aa0a8', accent: '#5a5f6b', size: 1.1 },
-  rockGolem: { name: 'ロックゴーレム', hp: 540, weak: 'hammer', atkDmg: 28, atk: [2.0, 3.0], color: '#7a4a30', accent: '#3a2a1a', size: 1.2 },
+  // Bosses (bigger sprites + alt attack patterns)
+  dragon:    { name: 'ドラゴン',     hp: 220, weak: 'spear',  atkDmg: 18, atk: [2.2, 3.2], color: '#d62828', accent: '#ffce5a', size: 1.5,
+               altAtk: { name: '火炎', dmg: 28, atk: [3.2, 4.0] } },
+  kingDrag:  { name: 'キングドラゴン', hp: 420, weak: 'spear',  atkDmg: 24, atk: [2.0, 3.0], color: '#c020e0', accent: '#ffce5a', size: 1.7,
+               altAtk: { name: '竜の咆哮', dmg: 38, atk: [3.0, 4.0], aoe: true } },
+  golem:     { name: 'ゴーレム',     hp: 280, weak: 'hammer', atkDmg: 20, atk: [2.4, 3.4], color: '#9aa0a8', accent: '#5a5f6b', size: 1.5,
+               altAtk: { name: '岩拳',  dmg: 32, atk: [3.4, 4.4] } },
+  rockGolem: { name: 'ロックゴーレム', hp: 540, weak: 'hammer', atkDmg: 28, atk: [2.0, 3.0], color: '#7a4a30', accent: '#3a2a1a', size: 1.8,
+               altAtk: { name: '岩塊投げ', dmg: 46, atk: [3.0, 4.0] } },
 };
 
 const STAGES = [
@@ -352,6 +361,8 @@ function saveProgress() {
       equipped: state.equipped,
       nextItemId: state.nextItemId,
       clearedStages: state.clearedStages,
+      level: state.level,
+      exp: state.exp,
     }));
   } catch (e) {}
 }
@@ -418,7 +429,9 @@ function resetState() {
 
   state = {
     scene: 'mainMenu',
-    knight: createKnight(),
+    level: (saved && saved.level) || 1,
+    exp: (saved && saved.exp) || 0,
+    knight: null,
     enemies: [],
     targetIdx: 0,
     stageIdx: 0,
@@ -448,8 +461,34 @@ function resetState() {
     dropFxTimer: 0,
     clouds: makeClouds(),
   };
+  state.knight = createKnight();
   syncHud();
   showMainMenu();
+}
+
+function expForLevel(lv) {
+  // Total EXP needed to reach lv
+  return Math.floor(80 * Math.pow(lv - 1, 1.4));
+}
+
+function expToNext() {
+  return expForLevel(state.level + 1) - state.exp;
+}
+
+function gainExp(amount) {
+  state.exp += amount;
+  let leveled = 0;
+  while (state.exp >= expForLevel(state.level + 1)) {
+    state.level++;
+    leveled++;
+  }
+  if (leveled > 0) {
+    // Heal to new max
+    state.knight.maxHp = calcMaxHp(state.level);
+    state.knight.hp = state.knight.maxHp;
+  }
+  saveProgress();
+  return leveled;
 }
 
 function makeClouds() {
@@ -460,16 +499,19 @@ function makeClouds() {
   return arr;
 }
 
+function calcMaxHp(level) { return 180 + level * 20; }
+
 function createKnight() {
-  return { hp: 200, maxHp: 200, ap: 5, maxAp: 5, apRegen: 0.55, x: 95, y: 290, hitTimer: 0, attackAnim: 0, attackWeapon: null };
+  const lv = (state && state.level) || 1;
+  const maxHp = calcMaxHp(lv);
+  return { hp: maxHp, maxHp, ap: 10, maxAp: 10, apRegen: 0.95, x: 95, y: 290, hitTimer: 0, attackAnim: 0, attackWeapon: null };
 }
 
 function createEnemy(type, slot) {
   const p = ENEMIES[type];
-  // Slot positions: 0, 1, 2 (left to right at front)
   const baseX = 250 + slot * 78;
   const baseY = 290;
-  return {
+  const e = {
     type, name: p.name, hp: p.hp, maxHp: p.hp,
     weak: p.weak, atkDmg: p.atkDmg, atk: p.atk,
     color: p.color, accent: p.accent, size: p.size || 1.0,
@@ -478,8 +520,22 @@ function createEnemy(type, slot) {
     attackTimer: rand(p.atk[0], p.atk[1]) + 1.0 + slot * 0.3,
     hitTimer: 0,
     bob: Math.random() * Math.PI * 2,
+    altAtk: p.altAtk || null,
+    pendingAtk: null,
     slot,
   };
+  rollEnemyAttack(e);
+  return e;
+}
+
+function rollEnemyAttack(e) {
+  if (e.altAtk && Math.random() < 0.35) {
+    e.pendingAtk = { name: e.altAtk.name, dmg: e.altAtk.dmg, aoe: !!e.altAtk.aoe };
+    e.attackTimer = rand(e.altAtk.atk[0], e.altAtk.atk[1]);
+  } else {
+    e.pendingAtk = { name: '攻撃', dmg: e.atkDmg, aoe: false };
+    e.attackTimer = rand(e.atk[0], e.atk[1]);
+  }
 }
 
 function rand(a, b) { return a + Math.random() * (b - a); }
@@ -713,7 +769,7 @@ function tryGuard() {
   if (hpGain > 0) detail += ` +HP${hpGain}`;
   addFloat(detail, k.x, k.y - 50, color, 1.2, kind === 'MIRACLE' ? 26 : 20);
 
-  incoming.attackTimer = rand(incoming.atk[0], incoming.atk[1]);
+  rollEnemyAttack(incoming);
   if (!incoming.stunned) incoming.pp = Math.min(incoming.maxPp, incoming.pp + 12);
   syncHud();
 }
@@ -753,12 +809,16 @@ function cycleTarget() {
 
 function onEnemyAttackLand(e) {
   const k = state.knight;
-  k.hp = Math.max(0, k.hp - e.atkDmg);
+  const atk = e.pendingAtk || { name: '攻撃', dmg: e.atkDmg };
+  k.hp = Math.max(0, k.hp - atk.dmg);
   k.hitTimer = 0.3;
-  shake = Math.min(10, shake + 8);
+  shake = Math.min(12, shake + (atk.dmg > e.atkDmg ? 12 : 8));
   sound.enemyAtk();
-  addFloat(`-${e.atkDmg}`, k.x, k.y - 30, '#ff6b6b', 0.85);
-  e.attackTimer = rand(e.atk[0], e.atk[1]);
+  if (atk.name && atk.name !== '攻撃') {
+    addFloat(atk.name + '!', e.x, e.y - 60, '#ff80b0', 1.0, 18);
+  }
+  addFloat(`-${atk.dmg}`, k.x, k.y - 30, '#ff6b6b', 0.85);
+  rollEnemyAttack(e);
   state.hitCombo = 0;
   if (k.hp <= 0) onDefeat();
   syncHud();
@@ -794,6 +854,10 @@ function onStageClear() {
   if (!state.clearedStages.includes(state.stageIdx)) {
     state.clearedStages.push(state.stageIdx);
   }
+  // Grant EXP based on stage difficulty
+  const expGained = 60 + state.stageIdx * 40;
+  state._expGained = expGained;
+  state._levelsGained = gainExp(expGained);
   saveProgress();
   showResultScreen();
 }
@@ -1061,7 +1125,14 @@ function showResultScreen() {
   const grid = document.getElementById('chest-grid');
   const nextBtn = document.getElementById('result-next');
 
-  stageName.textContent = `${STAGES[state.stageIdx].name} クリア!`;
+  let statusLine = `${STAGES[state.stageIdx].name} クリア!`;
+  if (state._expGained) {
+    statusLine += `   +${state._expGained} EXP`;
+    if (state._levelsGained) statusLine += `   ★ Lv ${state.level} に上昇!`;
+  }
+  stageName.textContent = statusLine;
+  state._expGained = 0;
+  state._levelsGained = 0;
   grid.innerHTML = '';
 
   // backwards compat: chests may have legacy 'weapon' field
@@ -1176,11 +1247,15 @@ function hideOverlay() {
 // ============================================================
 function syncHud() {
   const k = state.knight;
+  if (!k) return;
   // HP
   const hpFill = document.getElementById('hp-fill');
   const hpText = document.getElementById('hp-text');
   if (hpFill) hpFill.style.width = `${(k.hp / k.maxHp) * 100}%`;
   if (hpText) hpText.textContent = `${Math.ceil(k.hp)}/${k.maxHp}`;
+  // Level
+  const lvNum = document.getElementById('lv-num');
+  if (lvNum) lvNum.textContent = state.level;
 
   // AP segments
   const segContainer = document.getElementById('ap-segments');
@@ -1201,27 +1276,26 @@ function syncHud() {
     fill.style.width = `${v * 100}%`;
   }
 
-  // Move buttons
+  // Current move buttons (row 2)
   for (const wKey of ['sword', 'spear', 'hammer']) {
-    const btn = document.querySelector(`.move-btn[data-weapon="${wKey}"]`);
-    if (!btn) continue;
+    const btn = document.querySelector(`.current-btn[data-weapon="${wKey}"]`);
     const move = getCurrentMove(wKey);
-    const next = getNextMove(wKey);
-    const curCell = btn.querySelector('.move-cell.current');
-    const nextCell = btn.querySelector('.move-cell.next');
-    if (curCell) {
-      const apEl = curCell.querySelector('.ap-cost');
-      const nameEl = curCell.querySelector('.cell-name');
+    if (btn) {
+      const apEl = btn.querySelector('.ap-cost');
+      const nameEl = btn.querySelector('.cell-name');
       if (apEl) apEl.textContent = move.ap;
       if (nameEl) nameEl.textContent = move.name;
+      btn.disabled = k.ap < move.ap;
     }
+    // NEXT preview cell (row 3)
+    const next = getNextMove(wKey);
+    const nextCell = document.querySelector(`.next-cell[data-weapon="${wKey}"]`);
     if (nextCell) {
-      const apEl = nextCell.querySelector('.ap-cost');
-      const nameEl = nextCell.querySelector('.cell-name');
+      const apEl = nextCell.querySelector('.next-ap');
+      const nameEl = nextCell.querySelector('.next-name');
       if (apEl) apEl.textContent = next.ap;
       if (nameEl) nameEl.textContent = next.name;
     }
-    btn.disabled = k.ap < move.ap;
   }
 
   // Round
@@ -1232,8 +1306,8 @@ function syncHud() {
   }
 
   // Equipment slots (rarity + plus) – read from equipped items
-  for (const wKey of ['sword', 'spear', 'hammer']) {
-    const slot = document.querySelector(`.weapon-col[data-weapon="${wKey}"] .eq-slot`);
+  for (const wKey of ITEM_TYPES) {
+    const slot = document.querySelector(`.eq-slot[data-slot="${wKey}"]`);
     if (!slot) continue;
     const item = getEquippedItem(wKey);
     const rarity = item ? item.rarity : 'common';
@@ -1306,7 +1380,7 @@ function update(dt) {
       if (e.stunTimer <= 0) {
         e.stunned = false;
         e.pp = 0;
-        e.attackTimer = rand(e.atk[0], e.atk[1]);
+        rollEnemyAttack(e);
       }
     } else {
       e.attackTimer -= dt;
@@ -2200,7 +2274,7 @@ function loop(now) {
 function bindUi() {
   const ensureAudio = () => { sound.init(); sound.resume(); };
 
-  for (const btn of document.querySelectorAll('.move-btn')) {
+  for (const btn of document.querySelectorAll('.current-btn')) {
     btn.addEventListener('click', () => { ensureAudio(); attack(btn.dataset.weapon); });
   }
   document.getElementById('shield').addEventListener('click', () => { ensureAudio(); tryGuard(); });
