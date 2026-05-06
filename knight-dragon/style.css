@@ -1270,6 +1270,133 @@ html, body {
   box-shadow: 0 8px 24px rgba(0,0,0,0.6);
 }
 
+/* ===== UR drop fanfare ===== */
+.ur-fanfare {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(255,208,102,0.5) 0%, rgba(40,20,60,0.85) 60%, rgba(0,0,0,0.95) 100%);
+  z-index: 100;
+  pointer-events: none;
+  overflow: hidden;
+  animation: ur-burst 0.5s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+.ur-fanfare.fade-out {
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+
+.ur-rays {
+  position: absolute;
+  inset: -50%;
+  background:
+    repeating-conic-gradient(from 0deg, rgba(255,224,80,0.32) 0deg 8deg, transparent 8deg 22deg);
+  animation: ur-spin 5s linear infinite;
+  filter: blur(0.5px);
+}
+
+.ur-banner {
+  font-size: 72px;
+  font-weight: 900;
+  color: #fff066;
+  text-shadow: 0 0 16px #ffd066, 0 0 36px #ff8000, 4px 4px 0 #2a1a08;
+  letter-spacing: 12px;
+  animation: ur-pulse-big 0.9s ease-in-out infinite;
+  z-index: 1;
+  margin-bottom: 8px;
+}
+
+.ur-icon {
+  width: 80px;
+  height: 110px;
+  filter: drop-shadow(0 0 12px #fff066);
+  animation: ur-icon-rise 0.7s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+  z-index: 1;
+}
+
+.ur-name {
+  font-size: 26px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 2px 2px 0 #000, 0 0 8px #ffd066;
+  margin-top: 16px;
+  letter-spacing: 2px;
+  z-index: 1;
+}
+
+.ur-plus {
+  font-size: 38px;
+  font-weight: 900;
+  color: #ffd066;
+  text-shadow: 3px 3px 0 #000, 0 0 12px #fff066;
+  letter-spacing: 1px;
+  margin-top: 4px;
+  z-index: 1;
+  animation: ur-pulse-big 0.9s ease-in-out infinite;
+}
+
+.ur-sparks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.ur-spark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  background: #fff066;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #ffd066, 0 0 16px #ff8000;
+  animation: ur-spark-fly 1.5s ease-out forwards;
+}
+.ur-spark.s0  { animation-delay: 0ms;   --ang:   0deg; }
+.ur-spark.s1  { animation-delay: 30ms;  --ang:  20deg; }
+.ur-spark.s2  { animation-delay: 60ms;  --ang:  40deg; }
+.ur-spark.s3  { animation-delay: 90ms;  --ang:  60deg; }
+.ur-spark.s4  { animation-delay: 120ms; --ang:  80deg; }
+.ur-spark.s5  { animation-delay: 150ms; --ang: 100deg; }
+.ur-spark.s6  { animation-delay: 180ms; --ang: 120deg; }
+.ur-spark.s7  { animation-delay: 210ms; --ang: 140deg; }
+.ur-spark.s8  { animation-delay: 240ms; --ang: 160deg; }
+.ur-spark.s9  { animation-delay: 270ms; --ang: 180deg; }
+.ur-spark.s10 { animation-delay: 300ms; --ang: 200deg; }
+.ur-spark.s11 { animation-delay: 330ms; --ang: 220deg; }
+.ur-spark.s12 { animation-delay: 360ms; --ang: 240deg; }
+.ur-spark.s13 { animation-delay: 390ms; --ang: 260deg; }
+.ur-spark.s14 { animation-delay: 420ms; --ang: 280deg; }
+.ur-spark.s15 { animation-delay: 450ms; --ang: 300deg; }
+.ur-spark.s16 { animation-delay: 480ms; --ang: 320deg; }
+.ur-spark.s17 { animation-delay: 510ms; --ang: 340deg; }
+
+@keyframes ur-burst {
+  from { transform: scale(0.4); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+@keyframes ur-pulse-big {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.1); }
+}
+@keyframes ur-icon-rise {
+  from { transform: translateY(80px) scale(0.3); opacity: 0; }
+  to   { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes ur-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes ur-spark-fly {
+  0%   { transform: translate(-50%, -50%) rotate(var(--ang)) translateX(0)   scale(0.6); opacity: 0; }
+  20%  { opacity: 1; }
+  100% { transform: translate(-50%, -50%) rotate(var(--ang)) translateX(380px) scale(0.2); opacity: 0; }
+}
+
 /* ===== Defeat overlay (small modal) ===== */
 #overlay {
   position: fixed;
@@ -1282,6 +1409,31 @@ html, body {
 }
 
 #overlay.hidden { display: none; }
+
+#overlay.paused-mode {
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.55);
+}
+#overlay.paused-mode .overlay-inner {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+#overlay.paused-mode #restart {
+  background: rgba(64, 96, 160, 0.6);
+  margin-top: 16px;
+}
+#overlay.paused-mode #overlay-text {
+  color: #ffd066;
+  font-size: 18px;
+  font-weight: bold;
+  letter-spacing: 4px;
+  animation: pause-pulse 1.5s ease-in-out infinite;
+}
+@keyframes pause-pulse {
+  0%, 100% { opacity: 0.7; }
+  50%      { opacity: 1; }
+}
 
 .overlay-inner {
   background: #1c2240;

@@ -452,6 +452,8 @@ function resetState() {
     nextItemId: initial.nextItemId,
     clearedStages: initial.clearedStages,
     chests: [],
+    pet: createPet(),
+    goldenDragon: null,
     specialFx: null,
     specialFxTimer: 0,
     hitCombo: 0,
@@ -555,6 +557,83 @@ function spawnRound() {
   state.showRoundText = 1.5;
   state.weaponHistory = [];
   state.roundCleared = false;
+  // ~7% chance of a golden dragon flyby per round
+  if (!state.goldenDragon && Math.random() < 0.07) {
+    spawnGoldenDragon();
+  }
+}
+
+function spawnGoldenDragon() {
+  state.goldenDragon = {
+    x: -50,
+    y: 70 + Math.random() * 30,
+    vx: 70,
+    hp: 80,
+    maxHp: 80,
+    hitTimer: 0,
+    bob: 0,
+  };
+  addFloat('★ 金のドラゴン出現!', W / 2, 100, '#ffd066', 2.0, 22);
+  sound.special();
+}
+
+function tryHitGoldenDragon(sx, sy) {
+  if (!state.goldenDragon) return false;
+  const gd = state.goldenDragon;
+  const d = Math.hypot(sx - gd.x, sy - gd.y);
+  if (d > 60) return false;
+  // Apply the player's currently-equipped sword/spear/hammer dmg + level bonus
+  const baseDmg = 18 + state.level * 3;
+  gd.hp -= baseDmg;
+  gd.hitTimer = 0.3;
+  sound.hit();
+  addFloat(`-${baseDmg}`, gd.x, gd.y - 30, '#ffe080', 0.7, 16);
+  if (gd.hp <= 0) onGoldenDragonDefeated();
+  return true;
+}
+
+function onGoldenDragonDefeated() {
+  const gold = 600 + Math.floor(Math.random() * 400);
+  state.gold = (state.gold || 0) + gold;
+  // Bonus UR chest dropped into the current pile
+  const types = ITEM_TYPES;
+  const type = types[Math.floor(Math.random() * types.length)];
+  state.chests.push({ type, rarity: 'ur', plus: 5, opened: false });
+  renderChestStack();
+  addFloat('★ 金のドラゴン撃破!', W / 2, 100, '#ffd066', 2.6, 28);
+  addFloat(`+${gold} GOLD  /  UR装備!`, W / 2, 140, '#ffe080', 2.6, 22);
+  sound.victory();
+  state.goldenDragon = null;
+  saveProgress();
+}
+
+// Pet companion (always active during battle)
+const PET_TYPES = {
+  fairy: { name: 'フェアリー', dmg: 8, cooldown: 4.0 },
+};
+function createPet() {
+  return { type: 'fairy', timer: 4.0, attackAnim: 0, targetX: 0, targetY: 0 };
+}
+function petAttack() {
+  if (state.scene !== 'battle' || state.paused || !state.pet) return;
+  const alive = aliveEnemies();
+  if (alive.length === 0) return;
+  const target = alive[Math.floor(Math.random() * alive.length)];
+  const cfg = PET_TYPES[state.pet.type] || PET_TYPES.fairy;
+  const dmg = cfg.dmg + state.level;
+  target.hp = Math.max(0, target.hp - dmg);
+  target.hitTimer = 0.2;
+  addFloat(`✦${dmg}`, target.x, target.y - 40, '#80ffff', 0.8, 14);
+  state.pet.attackAnim = 0.5;
+  state.pet.targetX = target.x;
+  state.pet.targetY = target.y;
+  if (target.hp <= 0 && !target._goldGiven) {
+    target._goldGiven = true;
+    const reward = Math.max(2, Math.floor(target.maxHp / 8));
+    state.gold = (state.gold || 0) + reward;
+    addFloat(`💰+${reward}`, target.x, target.y - 18, '#ffd066', 1.0, 14);
+  }
+  if (aliveEnemies().length === 0) onRoundClear();
 }
 
 function aliveEnemies() {
@@ -819,11 +898,14 @@ function togglePause() {
   if (state.scene !== 'battle') return;
   state.paused = !state.paused;
   const ag = document.getElementById('audio-toggle');
+  const ov = document.getElementById('overlay');
   if (state.paused) {
     if (ag) ag.classList.add('show-options');
+    if (ov) ov.classList.add('paused-mode');
     showOverlay('PAUSED', 'タップで再開', 'paused');
   } else {
     if (ag) ag.classList.remove('show-options');
+    if (ov) ov.classList.remove('paused-mode');
     hideOverlay();
   }
 }
@@ -1335,6 +1417,8 @@ function startStage(idx) {
   state.hitCombo = 0;
   state.hitComboTimer = 0;
   state.paused = false;
+  state.goldenDragon = null;
+  state.pet = createPet();
   hideAllScreens();
   hideOverlay();
   spawnRound();
@@ -1446,8 +1530,31 @@ function openChest(idx, cardEl) {
     <div class="rarity-tag" style="color:${RARITY_COLOR[chest.rarity]}">${RARITY_LABEL[chest.rarity]}</div>
     ${equippedNote}
   `;
-  sound.drop();
+  if (chest.rarity === 'ur') {
+    showUrFanfare(newItem);
+  } else {
+    sound.drop();
+  }
   syncHud();
+}
+
+function showUrFanfare(item) {
+  const fx = document.createElement('div');
+  fx.className = 'ur-fanfare';
+  const iconId = `ico-${item.type}`;
+  fx.innerHTML = `
+    <div class="ur-rays"></div>
+    <div class="ur-banner">★ UR ★</div>
+    <svg class="ur-icon"><use href="#${iconId}"/></svg>
+    <div class="ur-name">${item.name}</div>
+    <div class="ur-plus">+${item.plus}</div>
+    <div class="ur-sparks">${Array.from({length: 18}, (_, i) => `<span class="ur-spark s${i}"></span>`).join('')}</div>
+  `;
+  document.body.appendChild(fx);
+  sound.special();
+  setTimeout(() => sound.victory(), 200);
+  setTimeout(() => fx.classList.add('fade-out'), 1700);
+  setTimeout(() => fx.remove(), 2200);
 }
 
 function onVictory() {
@@ -1626,6 +1733,26 @@ function update(dt) {
     }
   }
 
+  // Pet auto-attack
+  if (state.pet) {
+    if (state.pet.attackAnim > 0) state.pet.attackAnim -= dt;
+    state.pet.timer -= dt;
+    if (state.pet.timer <= 0) {
+      const cd = (PET_TYPES[state.pet.type] || PET_TYPES.fairy).cooldown;
+      state.pet.timer = cd;
+      petAttack();
+    }
+  }
+
+  // Golden dragon flyover
+  if (state.goldenDragon) {
+    const gd = state.goldenDragon;
+    gd.x += gd.vx * dt;
+    gd.bob += dt * 4;
+    if (gd.hitTimer > 0) gd.hitTimer -= dt;
+    if (gd.x > W + 60) state.goldenDragon = null;
+  }
+
   syncHud();
 }
 
@@ -1640,12 +1767,15 @@ function render() {
 
   drawBackground();
 
+  if (state.goldenDragon) drawGoldenDragon();
+
   if (state.flashTimer > 0) {
     ctx.fillStyle = `rgba(255,255,255,${state.flashTimer * 0.4})`;
     ctx.fillRect(0, 0, W, H);
   }
 
   drawKnight(state.knight);
+  drawPet();
 
   // Sort enemies by y for depth
   const sorted = state.enemies.slice().sort((a, b) => a.y - b.y);
@@ -2253,6 +2383,82 @@ function drawTurtle(cx, cy, c, a) {
   px(cx - 26, cy - 2, c, 4, 6);
 }
 
+function drawGoldenDragon() {
+  const gd = state.goldenDragon;
+  if (!gd) return;
+  const x = gd.x;
+  const y = gd.y + Math.sin(gd.bob) * 5;
+  const flash = gd.hitTimer > 0 && Math.floor(gd.hitTimer * 20) % 2 === 0;
+  // Sparkles trail
+  for (let i = 0; i < 6; i++) {
+    const t = state.time * 6 + i;
+    const sx = x - 30 - i * 5 + Math.sin(t) * 4;
+    const sy = y + Math.cos(t) * 6;
+    ctx.fillStyle = `rgba(255, 230, 100, ${0.3 + 0.6 / (i + 1)})`;
+    ctx.fillRect(sx - 1, sy - 1, 2, 2);
+  }
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(0.5, 0.5);
+  drawDragon(0, 0, flash ? '#fff' : '#ffd066', flash ? '#fff' : '#fff8c0');
+  ctx.restore();
+  // HP bar above
+  const w = 36, h = 4;
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x - w / 2 - 1, y - 28, w + 2, h + 2);
+  ctx.fillStyle = '#222';
+  ctx.fillRect(x - w / 2, y - 27, w, h);
+  ctx.fillStyle = '#ffd066';
+  ctx.fillRect(x - w / 2, y - 27, w * Math.max(0, gd.hp / gd.maxHp), h);
+  // Glow ring
+  ctx.strokeStyle = `rgba(255, 220, 80, ${0.4 + Math.sin(state.time * 8) * 0.3})`;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(x, y, 24, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+function drawPet() {
+  if (!state.pet || !state.knight) return;
+  const k = state.knight;
+  const t = state.time;
+  const baseX = k.x + 32;
+  const baseY = k.y - 76;
+  let x = baseX, y = baseY;
+  const aa = state.pet.attackAnim || 0;
+  if (aa > 0) {
+    const phase = 1 - aa / 0.5;
+    const lerp = phase < 0.5 ? phase * 2 : (1 - phase) * 2;
+    x = baseX + (state.pet.targetX - baseX) * lerp;
+    y = baseY + (state.pet.targetY - baseY) * lerp;
+  } else {
+    x += Math.sin(t * 2) * 5;
+    y += Math.cos(t * 3) * 4;
+  }
+  // Sparkle trail
+  for (let i = 0; i < 4; i++) {
+    const sa = t * 4 + i * 0.6;
+    ctx.fillStyle = `rgba(255, 200, 220, ${0.3 + 0.5 / (i + 1)})`;
+    ctx.fillRect(x + Math.cos(sa) * 8 - 1, y + Math.sin(sa) * 6 - 1, 2, 2);
+  }
+  // Wings (flap)
+  const wing = 6 + Math.sin(t * 24) * 3;
+  ctx.fillStyle = 'rgba(180, 240, 255, 0.7)';
+  ctx.fillRect(Math.round(x - 12), Math.round(y - 2), wing, 4);
+  ctx.fillRect(Math.round(x + 6),  Math.round(y - 2), wing, 4);
+  // Body (small fairy)
+  ctx.fillStyle = '#ff90c0';
+  ctx.fillRect(Math.round(x - 6), Math.round(y - 6), 12, 12);
+  ctx.fillStyle = '#ffe8c0';
+  ctx.fillRect(Math.round(x - 4), Math.round(y - 4), 8, 8);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(Math.round(x - 2), Math.round(y - 1), 1, 2);
+  ctx.fillRect(Math.round(x + 1), Math.round(y - 1), 1, 2);
+  // Hair tuft
+  ctx.fillStyle = '#ffd066';
+  ctx.fillRect(Math.round(x - 4), Math.round(y - 8), 8, 2);
+}
+
 function drawDragon(cx, cy, c, a) {
   const dark = shadeColor(c, -30);
   // Tail (curled)
@@ -2648,10 +2854,12 @@ function bindUi() {
   // Click on canvas to target enemy
   canvas.addEventListener('click', (ev) => {
     ensureAudio();
-    if (state.scene !== 'battle') return;
+    if (state.scene !== 'battle' || state.paused) return;
     const rect = canvas.getBoundingClientRect();
     const sx = (ev.clientX - rect.left) * (canvas.width / rect.width);
     const sy = (ev.clientY - rect.top) * (canvas.height / rect.height);
+    // Try golden dragon first (high priority bonus target)
+    if (tryHitGoldenDragon(sx, sy)) return;
     let closest = -1, dmin = 60;
     for (let i = 0; i < state.enemies.length; i++) {
       const e = state.enemies[i];
@@ -2662,11 +2870,20 @@ function bindUi() {
     if (closest >= 0) state.targetIdx = closest;
   });
 
-  document.getElementById('restart').addEventListener('click', () => {
+  document.getElementById('restart').addEventListener('click', (ev) => {
+    ev.stopPropagation();
     hideOverlay();
     state.chests = [];
     renderChestStack();
     showMainMenu();
+  });
+
+  // Tap anywhere on pause overlay to resume (button still works)
+  document.getElementById('overlay').addEventListener('click', (ev) => {
+    if (state.scene === 'battle' && state.paused) {
+      if (ev.target.id === 'restart' || ev.target.closest('#restart')) return;
+      togglePause();
+    }
   });
 
   document.getElementById('result-next').addEventListener('click', () => {
