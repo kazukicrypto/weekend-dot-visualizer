@@ -1328,6 +1328,19 @@ html, body {
   z-index: 1;
 }
 
+.ur-tag {
+  font-size: 13px;
+  font-weight: bold;
+  color: #ffd066;
+  background: rgba(0,0,0,0.5);
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid #ffd066;
+  margin-top: 6px;
+  letter-spacing: 2px;
+  z-index: 1;
+}
+
 .ur-plus {
   font-size: 38px;
   font-weight: 900;
