@@ -224,10 +224,9 @@
             <div class="menu-label">フレンド</div>
             <div class="lock">🔒</div>
           </button>
-          <button class="menu-btn locked" data-menu="shop">
-            <div class="menu-icon">💛</div>
+          <button class="menu-btn" data-menu="shop">
+            <div class="menu-icon">🏪</div>
             <div class="menu-label">ショップ</div>
-            <div class="lock">🔒</div>
           </button>
           <button class="menu-btn locked" data-menu="treasure">
             <div class="menu-icon">📦</div>
@@ -252,6 +251,16 @@
         <h3 class="section-title">所持品</h3>
         <div id="inventory-list"></div>
         <button id="equipment-back" class="big-btn">メニューへ戻る</button>
+      </div>
+    </div>
+
+    <!-- ===== Shop Screen ===== -->
+    <div id="shop-screen" class="screen hidden">
+      <div class="screen-inner">
+        <h2 class="screen-title">ショップ</h2>
+        <div class="shop-balance">所持金 <span class="gold-icon">💰</span> <span id="shop-gold">0</span></div>
+        <div id="shop-list"></div>
+        <button id="shop-back" class="big-btn">メニューへ戻る</button>
       </div>
     </div>
 
