@@ -7,6 +7,46 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="ico-sword" viewBox="0 0 16 24">
+      <rect x="7" y="2" width="2" height="13" fill="#e8f8ff"/>
+      <rect x="7" y="2" width="1" height="13" fill="#7be0ff"/>
+      <rect x="7" y="14" width="2" height="2" fill="#9adde8"/>
+      <rect x="3" y="15" width="10" height="2" fill="#aab"/>
+      <rect x="3" y="15" width="10" height="1" fill="#ddd"/>
+      <rect x="2" y="15" width="1" height="2" fill="#666"/>
+      <rect x="13" y="15" width="1" height="2" fill="#666"/>
+      <rect x="7" y="17" width="2" height="4" fill="#a5621a"/>
+      <rect x="6" y="21" width="4" height="2" fill="#d4a040"/>
+    </symbol>
+    <symbol id="ico-spear" viewBox="0 0 16 24">
+      <rect x="7" y="1" width="2" height="2" fill="#fff8c0"/>
+      <rect x="6" y="3" width="4" height="1" fill="#fff8c0"/>
+      <rect x="6" y="4" width="4" height="1" fill="#ffe080"/>
+      <rect x="5" y="5" width="6" height="1" fill="#ffe080"/>
+      <rect x="5" y="6" width="6" height="1" fill="#ffd066"/>
+      <rect x="6" y="7" width="4" height="1" fill="#ffd066"/>
+      <rect x="6" y="8" width="4" height="1" fill="#d8a040"/>
+      <rect x="7" y="9" width="2" height="2" fill="#a87020"/>
+      <rect x="7" y="11" width="2" height="11" fill="#a5621a"/>
+      <rect x="6" y="13" width="4" height="1" fill="#ffd066"/>
+      <rect x="6" y="20" width="4" height="1" fill="#ffd066"/>
+    </symbol>
+    <symbol id="ico-hammer" viewBox="0 0 16 24">
+      <rect x="2" y="3" width="12" height="2" fill="#e0a070"/>
+      <rect x="2" y="5" width="12" height="5" fill="#cc8855"/>
+      <rect x="2" y="10" width="12" height="2" fill="#a06030"/>
+      <rect x="2" y="3" width="1" height="9" fill="#a06030"/>
+      <rect x="13" y="3" width="1" height="9" fill="#a06030"/>
+      <rect x="6" y="6" width="4" height="3" fill="#e8b478"/>
+      <rect x="7" y="12" width="2" height="10" fill="#a5621a"/>
+      <rect x="6" y="13" width="4" height="1" fill="#ffd066"/>
+      <rect x="6" y="20" width="4" height="1" fill="#ffd066"/>
+    </symbol>
+  </defs>
+</svg>
+
   <div id="app">
     <div id="game-wrap">
       <canvas id="game" width="480" height="600"></canvas>
@@ -32,66 +72,70 @@
         </div>
       </div>
 
-      <div id="combat-grid">
-        <!-- Equipment row (top) -->
-        <div class="eq-slot rarity-r" data-slot="sword">
-          <span class="eq-icon" data-icon="sword"></span>
-          <span class="eq-name">剣</span>
-          <span class="eq-plus">+1</span>
-        </div>
-        <div class="eq-slot rarity-sr" data-slot="spear">
-          <span class="eq-icon" data-icon="spear"></span>
-          <span class="eq-name">槍</span>
-          <span class="eq-plus">+2</span>
-        </div>
-        <div class="eq-slot rarity-r" data-slot="hammer">
-          <span class="eq-icon" data-icon="hammer"></span>
-          <span class="eq-name">ハンマー</span>
-          <span class="eq-plus">+1</span>
+      <div id="combat-row">
+        <div class="weapon-col" data-weapon="sword">
+          <div class="eq-slot rarity-r">
+            <svg class="eq-icon"><use href="#ico-sword"/></svg>
+            <span class="eq-name">剣</span>
+            <span class="eq-plus">+1</span>
+          </div>
+          <button class="move-btn" data-weapon="sword">
+            <div class="move-current">
+              <span class="ap-cost">2</span>
+              <svg class="move-icon"><use href="#ico-sword"/></svg>
+              <span class="cur-name">斬り上げ</span>
+            </div>
+            <div class="move-next">
+              <span class="next-label">NEXT</span>
+              <span class="next-ap">3</span>
+              <svg class="next-icon"><use href="#ico-sword"/></svg>
+              <span class="next-name">ブリ斬</span>
+            </div>
+          </button>
         </div>
 
-        <!-- Move buttons (middle row) -->
-        <button class="move-btn" data-weapon="sword">
-          <div class="move-current">
-            <span class="ap-cost">2</span>
-            <span class="move-icon" data-icon="sword"></span>
-            <span class="cur-name">斬り上げ</span>
+        <div class="weapon-col" data-weapon="spear">
+          <div class="eq-slot rarity-sr">
+            <svg class="eq-icon"><use href="#ico-spear"/></svg>
+            <span class="eq-name">槍</span>
+            <span class="eq-plus">+2</span>
           </div>
-          <div class="move-next">
-            <span class="next-label">NEXT</span>
-            <span class="next-ap">3</span>
-            <span class="next-icon" data-icon="sword"></span>
-            <span class="next-name">ブリ斬</span>
-          </div>
-        </button>
-        <button class="move-btn" data-weapon="spear">
-          <div class="move-current">
-            <span class="ap-cost">1</span>
-            <span class="move-icon" data-icon="spear"></span>
-            <span class="cur-name">シャベリン</span>
-          </div>
-          <div class="move-next">
-            <span class="next-label">NEXT</span>
-            <span class="next-ap">2</span>
-            <span class="next-icon" data-icon="spear"></span>
-            <span class="next-name">キック</span>
-          </div>
-        </button>
-        <button class="move-btn" data-weapon="hammer">
-          <div class="move-current">
-            <span class="ap-cost">2</span>
-            <span class="move-icon" data-icon="hammer"></span>
-            <span class="cur-name">ふっとばし</span>
-          </div>
-          <div class="move-next">
-            <span class="next-label">NEXT</span>
-            <span class="next-ap">3</span>
-            <span class="next-icon" data-icon="hammer"></span>
-            <span class="next-name">大地砕</span>
-          </div>
-        </button>
+          <button class="move-btn" data-weapon="spear">
+            <div class="move-current">
+              <span class="ap-cost">1</span>
+              <svg class="move-icon"><use href="#ico-spear"/></svg>
+              <span class="cur-name">シャベリン</span>
+            </div>
+            <div class="move-next">
+              <span class="next-label">NEXT</span>
+              <span class="next-ap">2</span>
+              <svg class="next-icon"><use href="#ico-spear"/></svg>
+              <span class="next-name">キック</span>
+            </div>
+          </button>
+        </div>
 
-        <!-- Side actions (right column, span both rows) -->
+        <div class="weapon-col" data-weapon="hammer">
+          <div class="eq-slot rarity-r">
+            <svg class="eq-icon"><use href="#ico-hammer"/></svg>
+            <span class="eq-name">槌</span>
+            <span class="eq-plus">+1</span>
+          </div>
+          <button class="move-btn" data-weapon="hammer">
+            <div class="move-current">
+              <span class="ap-cost">2</span>
+              <svg class="move-icon"><use href="#ico-hammer"/></svg>
+              <span class="cur-name">ふっとばし</span>
+            </div>
+            <div class="move-next">
+              <span class="next-label">NEXT</span>
+              <span class="next-ap">3</span>
+              <svg class="next-icon"><use href="#ico-hammer"/></svg>
+              <span class="next-name">大地砕</span>
+            </div>
+          </button>
+        </div>
+
         <div class="action-side">
           <button id="shield" class="side-btn shield-btn">
             <span class="side-icon">🛡</span>

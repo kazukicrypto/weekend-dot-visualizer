@@ -96,9 +96,7 @@ html, body {
   cursor: pointer;
 }
 
-.audio-btn.off {
-  opacity: 0.4;
-}
+.audio-btn.off { opacity: 0.4; }
 
 /* ===== HUD - wood theme ===== */
 #hud {
@@ -107,27 +105,17 @@ html, body {
   border: 2px solid #2a1a08;
   border-top: 3px solid #8b6940;
   border-radius: 0 0 6px 6px;
-  padding: 8px 8px 12px;
+  padding: 6px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  position: relative;
-}
-
-#hud::before {
-  content: '';
-  position: absolute;
-  inset: 4px;
-  border: 1px solid rgba(255, 220, 150, 0.15);
-  border-radius: 4px;
-  pointer-events: none;
+  gap: 6px;
 }
 
 /* ===== Bars ===== */
 #bars {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .bar-row {
@@ -137,16 +125,17 @@ html, body {
 }
 
 .bar-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: bold;
   color: #ffe0a0;
-  width: 24px;
+  width: 22px;
+  flex-shrink: 0;
   text-shadow: 1px 1px 0 #000;
 }
 
 .bar {
   flex: 1;
-  height: 14px;
+  height: 12px;
   background: #1a0e04;
   border: 1px solid #000;
   border-radius: 2px;
@@ -177,7 +166,7 @@ html, body {
   flex: 1;
   display: flex;
   gap: 2px;
-  height: 14px;
+  height: 12px;
 }
 
 .ap-seg {
@@ -195,62 +184,54 @@ html, body {
   transition: width 0.15s;
 }
 
-/* ===== Combat grid (equipment + moves + side aligned in columns) ===== */
-#combat-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 64px;
-  grid-template-rows: 36px 76px;
+/* ===== Combat row (3 weapon columns + side) ===== */
+#combat-row {
+  display: flex;
   gap: 4px;
+  align-items: stretch;
 }
 
-.action-side {
-  grid-column: 4;
-  grid-row: 1 / 3;
+.weapon-col {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
-/* ===== Equipment slots ===== */
+/* Equipment slot */
 .eq-slot {
   background: #2a1a08;
   border: 2px solid #8b6940;
   border-radius: 4px;
-  padding: 2px 4px;
+  height: 30px;
+  padding: 0 4px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 2px;
+  justify-content: center;
+  gap: 4px;
   position: relative;
-  height: 36px;
 }
 
-.eq-slot[data-slot="sword"]  { border-color: #5fb0e8; box-shadow: inset 0 0 8px rgba(95,176,232,0.25); }
-.eq-slot[data-slot="spear"]  { border-color: #ffd066; box-shadow: inset 0 0 8px rgba(255,208,102,0.25); }
-.eq-slot[data-slot="hammer"] { border-color: #d8946a; box-shadow: inset 0 0 8px rgba(216,148,106,0.25); }
+.weapon-col[data-weapon="sword"]  .eq-slot { border-color: #5fb0e8; box-shadow: inset 0 0 6px rgba(95,176,232,0.3); }
+.weapon-col[data-weapon="spear"]  .eq-slot { border-color: #ffd066; box-shadow: inset 0 0 6px rgba(255,208,102,0.3); }
+.weapon-col[data-weapon="hammer"] .eq-slot { border-color: #d8946a; box-shadow: inset 0 0 6px rgba(216,148,106,0.3); }
 
 .eq-slot.rarity-r .eq-plus  { color: #6fc0ff; }
 .eq-slot.rarity-sr .eq-plus { color: #d090ff; }
 
 .eq-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 28px;
-}
-
-.eq-icon svg {
-  width: 100%;
-  height: 100%;
+  width: 14px;
+  height: 21px;
+  flex-shrink: 0;
+  shape-rendering: crispEdges;
 }
 
 .eq-name {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: bold;
-  color: #ffe0a0;
-  flex: 1;
-  text-align: center;
+  color: #ffe8b0;
+  text-shadow: 1px 1px 0 #000;
 }
 
 .eq-plus {
@@ -260,7 +241,7 @@ html, body {
   text-shadow: 1px 1px 0 #000;
 }
 
-/* ===== Move buttons ===== */
+/* Move button */
 .move-btn {
   font-family: inherit;
   background: #2a1a08;
@@ -272,7 +253,7 @@ html, body {
   flex-direction: column;
   cursor: pointer;
   color: #fff;
-  height: 76px;
+  height: 88px;
   position: relative;
   touch-action: manipulation;
   transition: transform 0.05s;
@@ -280,6 +261,10 @@ html, body {
 
 .move-btn:active:not(:disabled) { transform: scale(0.96); }
 .move-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.move-btn[data-weapon="sword"]  { border-color: #5fb0e8; }
+.move-btn[data-weapon="spear"]  { border-color: #ffd066; }
+.move-btn[data-weapon="hammer"] { border-color: #d8946a; }
 
 .move-current {
   flex: 1;
@@ -289,18 +274,12 @@ html, body {
   justify-content: center;
   padding: 2px;
   position: relative;
-  border-bottom: 1px solid #1a0e04;
-  min-height: 50px;
+  border-bottom: 2px solid #1a0e04;
 }
 
-/* Weapon-specific tinting */
-.move-btn[data-weapon="sword"]  { border-color: #5fb0e8; }
-.move-btn[data-weapon="spear"]  { border-color: #ffd066; }
-.move-btn[data-weapon="hammer"] { border-color: #d8946a; }
-
-.move-btn[data-weapon="sword"]  .move-current { background: linear-gradient(180deg, #4a78c0 0%, #2a4a80 100%); }
-.move-btn[data-weapon="spear"]  .move-current { background: linear-gradient(180deg, #c89030 0%, #6a4818 100%); }
-.move-btn[data-weapon="hammer"] .move-current { background: linear-gradient(180deg, #b06840 0%, #683818 100%); }
+.move-btn[data-weapon="sword"]  .move-current { background: linear-gradient(180deg, #5290d0 0%, #2a4a80 100%); }
+.move-btn[data-weapon="spear"]  .move-current { background: linear-gradient(180deg, #d09030 0%, #6a4818 100%); }
+.move-btn[data-weapon="hammer"] .move-current { background: linear-gradient(180deg, #b86c40 0%, #683818 100%); }
 
 .ap-cost {
   position: absolute;
@@ -322,40 +301,38 @@ html, body {
 }
 
 .move-icon {
-  width: 28px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 32px;
+  height: 44px;
+  shape-rendering: crispEdges;
+  filter: drop-shadow(1px 2px 0 rgba(0,0,0,0.5));
   margin-top: 2px;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
-}
-
-.move-icon svg {
-  width: 100%;
-  height: 100%;
 }
 
 .cur-name {
   font-size: 11px;
   font-weight: bold;
   color: #fff;
-  text-shadow: 1px 1px 0 #000;
+  text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
   text-align: center;
   line-height: 1;
-  margin-top: 1px;
+  margin-top: 2px;
+  padding: 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .move-next {
   background: #1a1018;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding: 2px 3px;
   font-size: 9px;
   color: #aaa;
   height: 22px;
-  gap: 3px;
+  gap: 2px;
 }
 
 .next-label {
@@ -366,13 +343,14 @@ html, body {
   font-size: 8px;
   letter-spacing: 0.5px;
   flex-shrink: 0;
+  font-weight: bold;
 }
 
 .next-ap {
   background: #d22020;
   color: #fff;
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
@@ -383,31 +361,31 @@ html, body {
 }
 
 .next-icon {
-  width: 12px;
-  height: 16px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  width: 10px;
+  height: 14px;
   flex-shrink: 0;
-}
-
-.next-icon svg {
-  width: 100%;
-  height: 100%;
+  shape-rendering: crispEdges;
 }
 
 .next-name {
   flex: 1;
-  text-align: center;
   font-size: 10px;
   font-weight: bold;
   color: #ddd;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-align: left;
 }
 
 /* ===== Side action buttons ===== */
+.action-side {
+  flex: 0 0 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .side-btn {
   font-family: inherit;
   flex: 1;
@@ -423,29 +401,25 @@ html, body {
   position: relative;
   touch-action: manipulation;
   transition: transform 0.05s;
+  min-height: 40px;
 }
 
 .side-btn:active:not(:disabled) { transform: scale(0.96); }
 .side-btn:disabled { opacity: 0.4; }
 
-.shield-btn {
-  background: linear-gradient(180deg, #4a6b95 0%, #243a5a 100%);
-}
-
-.meat-btn {
-  background: linear-gradient(180deg, #d2a050 0%, #8b6030 100%);
-}
+.shield-btn { background: linear-gradient(180deg, #4a6b95 0%, #243a5a 100%); }
+.meat-btn { background: linear-gradient(180deg, #d2a050 0%, #8b6030 100%); }
 
 .side-icon {
-  font-size: 22px;
+  font-size: 20px;
   line-height: 1;
 }
 
 .side-label {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: bold;
   letter-spacing: 1px;
-  margin-top: 2px;
+  margin-top: 1px;
   text-shadow: 1px 1px 0 #000;
 }
 
@@ -453,7 +427,7 @@ html, body {
   position: absolute;
   bottom: 2px;
   right: 4px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: bold;
   text-shadow: 1px 1px 0 #000;
 }

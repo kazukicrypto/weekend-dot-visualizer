@@ -186,10 +186,7 @@ const WEAPON_SVG = {
 };
 
 function injectWeaponIcons() {
-  for (const el of document.querySelectorAll('[data-icon]')) {
-    const key = el.dataset.icon;
-    if (WEAPON_SVG[key]) el.innerHTML = WEAPON_SVG[key];
-  }
+  // SVGs are inlined in index.html via <use href> - nothing to do here.
 }
 
 const ENEMIES = {
