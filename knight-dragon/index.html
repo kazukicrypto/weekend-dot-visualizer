@@ -32,61 +32,72 @@
         </div>
       </div>
 
-      <div id="equipment">
+      <div id="combat-grid">
+        <!-- Equipment row (top) -->
         <div class="eq-slot rarity-r" data-slot="sword">
-          <span class="eq-icon">⚔</span>
+          <span class="eq-icon" data-icon="sword"></span>
+          <span class="eq-name">剣</span>
           <span class="eq-plus">+1</span>
         </div>
         <div class="eq-slot rarity-sr" data-slot="spear">
-          <span class="eq-icon">🔱</span>
+          <span class="eq-icon" data-icon="spear"></span>
+          <span class="eq-name">槍</span>
           <span class="eq-plus">+2</span>
         </div>
         <div class="eq-slot rarity-r" data-slot="hammer">
-          <span class="eq-icon">🔨</span>
+          <span class="eq-icon" data-icon="hammer"></span>
+          <span class="eq-name">ハンマー</span>
           <span class="eq-plus">+1</span>
         </div>
-      </div>
 
-      <div id="action-row">
+        <!-- Move buttons (middle row) -->
         <button class="move-btn" data-weapon="sword">
           <div class="move-current">
             <span class="ap-cost">2</span>
+            <span class="move-icon" data-icon="sword"></span>
             <span class="cur-name">斬り上げ</span>
           </div>
           <div class="move-next">
             <span class="next-label">NEXT</span>
             <span class="next-ap">3</span>
+            <span class="next-icon" data-icon="sword"></span>
             <span class="next-name">ブリ斬</span>
           </div>
         </button>
         <button class="move-btn" data-weapon="spear">
           <div class="move-current">
             <span class="ap-cost">1</span>
+            <span class="move-icon" data-icon="spear"></span>
             <span class="cur-name">シャベリン</span>
           </div>
           <div class="move-next">
             <span class="next-label">NEXT</span>
             <span class="next-ap">2</span>
+            <span class="next-icon" data-icon="spear"></span>
             <span class="next-name">キック</span>
           </div>
         </button>
         <button class="move-btn" data-weapon="hammer">
           <div class="move-current">
             <span class="ap-cost">2</span>
+            <span class="move-icon" data-icon="hammer"></span>
             <span class="cur-name">ふっとばし</span>
           </div>
           <div class="move-next">
             <span class="next-label">NEXT</span>
             <span class="next-ap">3</span>
+            <span class="next-icon" data-icon="hammer"></span>
             <span class="next-name">大地砕</span>
           </div>
         </button>
+
+        <!-- Side actions (right column, span both rows) -->
         <div class="action-side">
-          <button id="shield" class="side-btn">
+          <button id="shield" class="side-btn shield-btn">
             <span class="side-icon">🛡</span>
             <span class="side-label">ガード</span>
           </button>
-          <button id="meat" class="side-btn">
+          <button id="meat" class="side-btn meat-btn">
             <span class="side-icon">🍖</span>
             <span class="side-count" id="meat-count">×2</span>
           </button>

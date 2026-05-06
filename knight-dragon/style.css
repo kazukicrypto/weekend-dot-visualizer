@@ -92,6 +92,8 @@ html, body {
   color: #fff;
   letter-spacing: 0.5px;
   min-width: 36px;
+  font-family: inherit;
+  cursor: pointer;
 }
 
 .audio-btn.off {
@@ -193,33 +195,62 @@ html, body {
   transition: width 0.15s;
 }
 
-/* ===== Equipment slots ===== */
-#equipment {
+/* ===== Combat grid (equipment + moves + side aligned in columns) ===== */
+#combat-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr 1fr 1fr 64px;
+  grid-template-rows: 36px 76px;
   gap: 4px;
 }
 
+.action-side {
+  grid-column: 4;
+  grid-row: 1 / 3;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ===== Equipment slots ===== */
 .eq-slot {
   background: #2a1a08;
   border: 2px solid #8b6940;
   border-radius: 4px;
-  padding: 4px;
+  padding: 2px 4px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
+  justify-content: space-between;
+  gap: 2px;
   position: relative;
-  height: 32px;
+  height: 36px;
 }
 
-.eq-slot.rarity-r { border-color: #4080d0; box-shadow: inset 0 0 8px rgba(64,128,208,0.3); }
-.eq-slot.rarity-sr { border-color: #b060e0; box-shadow: inset 0 0 8px rgba(176,96,224,0.3); }
-.eq-slot.rarity-ur { border-color: #ffd066; box-shadow: inset 0 0 10px rgba(255,208,102,0.4); }
+.eq-slot[data-slot="sword"]  { border-color: #5fb0e8; box-shadow: inset 0 0 8px rgba(95,176,232,0.25); }
+.eq-slot[data-slot="spear"]  { border-color: #ffd066; box-shadow: inset 0 0 8px rgba(255,208,102,0.25); }
+.eq-slot[data-slot="hammer"] { border-color: #d8946a; box-shadow: inset 0 0 8px rgba(216,148,106,0.25); }
+
+.eq-slot.rarity-r .eq-plus  { color: #6fc0ff; }
+.eq-slot.rarity-sr .eq-plus { color: #d090ff; }
 
 .eq-icon {
-  font-size: 18px;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 28px;
+}
+
+.eq-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.eq-name {
+  font-size: 10px;
+  font-weight: bold;
+  color: #ffe0a0;
+  flex: 1;
+  text-align: center;
 }
 
 .eq-plus {
@@ -229,13 +260,7 @@ html, body {
   text-shadow: 1px 1px 0 #000;
 }
 
-/* ===== Action row ===== */
-#action-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 64px;
-  gap: 4px;
-}
-
+/* ===== Move buttons ===== */
 .move-btn {
   font-family: inherit;
   background: #2a1a08;
@@ -253,26 +278,29 @@ html, body {
   transition: transform 0.05s;
 }
 
-.move-btn:active:not(:disabled) {
-  transform: scale(0.96);
-}
-
-.move-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
+.move-btn:active:not(:disabled) { transform: scale(0.96); }
+.move-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .move-current {
   flex: 1;
-  background: linear-gradient(180deg, #c08850 0%, #8b6030 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 4px;
+  padding: 2px;
   position: relative;
-  border-bottom: 1px solid #2a1a08;
+  border-bottom: 1px solid #1a0e04;
+  min-height: 50px;
 }
+
+/* Weapon-specific tinting */
+.move-btn[data-weapon="sword"]  { border-color: #5fb0e8; }
+.move-btn[data-weapon="spear"]  { border-color: #ffd066; }
+.move-btn[data-weapon="hammer"] { border-color: #d8946a; }
+
+.move-btn[data-weapon="sword"]  .move-current { background: linear-gradient(180deg, #4a78c0 0%, #2a4a80 100%); }
+.move-btn[data-weapon="spear"]  .move-current { background: linear-gradient(180deg, #c89030 0%, #6a4818 100%); }
+.move-btn[data-weapon="hammer"] .move-current { background: linear-gradient(180deg, #b06840 0%, #683818 100%); }
 
 .ap-cost {
   position: absolute;
@@ -289,18 +317,33 @@ html, body {
   align-items: center;
   justify-content: center;
   border: 2px solid #fff;
-  text-shadow: none;
   box-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  z-index: 2;
+}
+
+.move-icon {
+  width: 28px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+}
+
+.move-icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 .cur-name {
   font-size: 11px;
   font-weight: bold;
   color: #fff;
-  text-shadow: 1px 1px 0 #4a2a10;
-  margin-top: 14px;
+  text-shadow: 1px 1px 0 #000;
   text-align: center;
-  line-height: 1.1;
+  line-height: 1;
+  margin-top: 1px;
 }
 
 .move-next {
@@ -308,19 +351,21 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 2px 4px;
+  padding: 2px 3px;
   font-size: 9px;
   color: #aaa;
   height: 22px;
+  gap: 3px;
 }
 
 .next-label {
   background: #555;
   color: #fff;
-  padding: 1px 4px;
+  padding: 1px 3px;
   border-radius: 2px;
   font-size: 8px;
   letter-spacing: 0.5px;
+  flex-shrink: 0;
 }
 
 .next-ap {
@@ -334,26 +379,38 @@ html, body {
   justify-content: center;
   font-size: 9px;
   font-weight: bold;
+  flex-shrink: 0;
+}
+
+.next-icon {
+  width: 12px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.next-icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 .next-name {
   flex: 1;
   text-align: center;
-  font-size: 9px;
-  color: #ccc;
+  font-size: 10px;
+  font-weight: bold;
+  color: #ddd;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ===== Side action buttons ===== */
-.action-side {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
 .side-btn {
   font-family: inherit;
   flex: 1;
-  background: linear-gradient(180deg, #4a6080 0%, #2a3a55 100%);
   border: 2px solid #8b6940;
   border-radius: 4px;
   padding: 0;
@@ -368,16 +425,15 @@ html, body {
   transition: transform 0.05s;
 }
 
-.side-btn:active:not(:disabled) {
-  transform: scale(0.96);
+.side-btn:active:not(:disabled) { transform: scale(0.96); }
+.side-btn:disabled { opacity: 0.4; }
+
+.shield-btn {
+  background: linear-gradient(180deg, #4a6b95 0%, #243a5a 100%);
 }
 
-#meat {
+.meat-btn {
   background: linear-gradient(180deg, #d2a050 0%, #8b6030 100%);
-}
-
-#meat:disabled {
-  opacity: 0.4;
 }
 
 .side-icon {
@@ -390,6 +446,7 @@ html, body {
   font-weight: bold;
   letter-spacing: 1px;
   margin-top: 2px;
+  text-shadow: 1px 1px 0 #000;
 }
 
 .side-count {
@@ -444,4 +501,5 @@ html, body {
   color: #fff;
   border-radius: 6px;
   cursor: pointer;
+  font-family: inherit;
 }
