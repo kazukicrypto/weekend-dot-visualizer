@@ -248,9 +248,29 @@ let state;
 let lastTime = 0;
 let shake = 0;
 
+const SAVE_KEY = 'kishidora_save_v2';
+
+function loadSave() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) { return null; }
+}
+
+function saveProgress() {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      weapons: state.weapons,
+      clearedStages: state.clearedStages,
+    }));
+  } catch (e) {}
+}
+
 function resetState() {
+  const saved = loadSave();
   state = {
-    scene: 'battle',
+    scene: 'stageSelect',
     knight: createKnight(),
     enemies: [],
     targetIdx: 0,
@@ -264,11 +284,13 @@ function resetState() {
     weakHintTimer: 0,
     weaponHistory: [],
     weaponQueueIdx: { sword: 0, spear: 0, hammer: 0 },
-    weapons: {
-      sword:  { plus: 1, rarity: 'r' },
-      spear:  { plus: 2, rarity: 'sr' },
-      hammer: { plus: 1, rarity: 'r' },
+    weapons: saved && saved.weapons ? saved.weapons : {
+      sword:  { plus: 0, rarity: 'common' },
+      spear:  { plus: 0, rarity: 'common' },
+      hammer: { plus: 0, rarity: 'common' },
     },
+    clearedStages: saved && saved.clearedStages ? saved.clearedStages : [],
+    chests: [],
     specialFx: null,
     specialFxTimer: 0,
     hitCombo: 0,
@@ -281,8 +303,8 @@ function resetState() {
     dropFxTimer: 0,
     clouds: makeClouds(),
   };
-  spawnRound();
   syncHud();
+  showStageSelect();
 }
 
 function makeClouds() {
@@ -294,14 +316,14 @@ function makeClouds() {
 }
 
 function createKnight() {
-  return { hp: 180, maxHp: 180, ap: 5, maxAp: 5, apRegen: 0.65, x: 100, y: 420, hitTimer: 0, attackAnim: 0, attackWeapon: null };
+  return { hp: 180, maxHp: 180, ap: 5, maxAp: 5, apRegen: 0.65, x: 95, y: 290, hitTimer: 0, attackAnim: 0, attackWeapon: null };
 }
 
 function createEnemy(type, slot) {
   const p = ENEMIES[type];
   // Slot positions: 0, 1, 2 (left to right at front)
   const baseX = 250 + slot * 78;
-  const baseY = 420;
+  const baseY = 290;
   return {
     type, name: p.name, hp: p.hp, maxHp: p.hp,
     weak: p.weak, atkDmg: p.atkDmg, atk: p.atk,
@@ -328,6 +350,7 @@ function spawnRound() {
   state.targetIdx = 0;
   state.showRoundText = 1.5;
   state.weaponHistory = [];
+  state.roundCleared = false;
 }
 
 function aliveEnemies() {
@@ -596,25 +619,21 @@ function onEnemyAttackLand(e) {
 }
 
 function onRoundClear() {
-  // Drop chance per round clear
+  if (state.roundCleared) return;
+  state.roundCleared = true;
+  // Drop chance per round clear (chest accumulates, not yet revealed)
   if (Math.random() < 0.65) {
-    setTimeout(() => { if (state.scene === 'battle') dropWeapon(); }, 350);
+    setTimeout(() => { if (state.scene === 'battle') addChest(); }, 350);
   }
 
   state.roundIdx++;
   const stage = STAGES[state.stageIdx];
   if (state.roundIdx >= stage.rounds.length) {
-    state.stageIdx++;
-    state.roundIdx = 0;
-    if (state.stageIdx >= STAGES.length) {
-      onVictory();
-      return;
-    }
-    addFloat(`${STAGES[state.stageIdx].name}`, W / 2, 200, '#ffd066', 2.0, 22);
-    state.knight.hp = state.knight.maxHp;
-    state.meatCount = Math.min(2, state.meatCount + 1);
-    // Stage-clear bonus drop (always)
-    setTimeout(() => { if (state.scene === 'battle') dropWeapon(true); }, 600);
+    // Stage cleared → bonus chests + result screen
+    setTimeout(() => { if (state.scene === 'battle') addChest(true); }, 500);
+    setTimeout(() => { if (state.scene === 'battle') addChest(true); }, 800);
+    setTimeout(onStageClear, 1500);
+    return;
   }
   state.roundTransition = 1.0;
   setTimeout(() => {
@@ -622,6 +641,15 @@ function onRoundClear() {
     spawnRound();
     syncHud();
   }, 1100);
+}
+
+function onStageClear() {
+  if (state.scene !== 'battle') return;
+  if (!state.clearedStages.includes(state.stageIdx)) {
+    state.clearedStages.push(state.stageIdx);
+  }
+  saveProgress();
+  showResultScreen();
 }
 
 const RARITY_RANK = { common: 0, r: 1, sr: 2, ur: 3 };
@@ -641,26 +669,140 @@ function rollDrop(forceHigh) {
   return { rarity: 'common', plus: 1 };
 }
 
-function dropWeapon(forceHigh) {
+function addChest(forceHigh) {
   const keys = ['sword', 'spear', 'hammer'];
   const target = keys[Math.floor(Math.random() * 3)];
   const drop = rollDrop(forceHigh);
-  const ws = state.weapons[target];
-  ws.plus = (ws.plus || 0) + drop.plus;
-  if (RARITY_RANK[drop.rarity] > (RARITY_RANK[ws.rarity] || -1)) {
-    ws.rarity = drop.rarity;
-  }
-  sound.drop();
-  state.dropFx = {
+  state.chests.push({
     weapon: target,
-    weaponName: WEAPONS[target].name,
     rarity: drop.rarity,
     plus: drop.plus,
-    color: RARITY_COLOR[drop.rarity],
-    label: RARITY_LABEL[drop.rarity],
-  };
-  state.dropFxTimer = 2.4;
+    opened: false,
+  });
+  sound.drop();
+  addFloat('宝箱を発見!', W / 2, 120, '#ffd066', 1.2, 20);
+  renderChestStack();
+}
+
+function renderChestStack() {
+  const wrap = document.getElementById('chest-stack');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  for (const c of state.chests) {
+    if (c.opened) continue;
+    const el = document.createElement('div');
+    el.className = `mini-chest rarity-${c.rarity}`;
+    el.innerHTML = '<svg><use href="#ico-chest"/></svg>';
+    wrap.appendChild(el);
+  }
+}
+
+// ============================================================
+// SCENE: STAGE SELECT
+// ============================================================
+function showStageSelect() {
+  state.scene = 'stageSelect';
+  hideOverlay();
+  document.getElementById('result-screen').classList.add('hidden');
+  document.getElementById('stage-select').classList.remove('hidden');
+
+  const list = document.getElementById('stage-list');
+  list.innerHTML = '';
+
+  for (let i = 0; i < STAGES.length; i++) {
+    const stage = STAGES[i];
+    const cleared = state.clearedStages.includes(i);
+    const available = i === 0 || state.clearedStages.includes(i - 1);
+
+    const btn = document.createElement('button');
+    btn.className = `stage-item ${cleared ? 'cleared' : ''}`;
+    btn.disabled = !available;
+    btn.innerHTML = `
+      <div class="stage-num">${i + 1}</div>
+      <div class="stage-meta">
+        <div class="stage-name">${stage.name}</div>
+        <div class="stage-rounds">${stage.rounds.length} ROUNDS</div>
+      </div>
+      <div class="stage-status">${cleared ? '✓ 撃破' : (available ? '挑戦' : '🔒')}</div>
+    `;
+    if (available) {
+      btn.addEventListener('click', () => startStage(i));
+    }
+    list.appendChild(btn);
+  }
+}
+
+function startStage(idx) {
+  state.scene = 'battle';
+  state.stageIdx = idx;
+  state.roundIdx = 0;
+  state.knight = createKnight();
+  state.chests = [];
+  state.meatCount = 2;
+  state.weaponHistory = [];
+  state.weaponQueueIdx = { sword: 0, spear: 0, hammer: 0 };
+  state.hitCombo = 0;
+  state.hitComboTimer = 0;
+  state.paused = false;
+  document.getElementById('stage-select').classList.add('hidden');
+  document.getElementById('result-screen').classList.add('hidden');
+  hideOverlay();
+  spawnRound();
+  renderChestStack();
   syncHud();
+}
+
+// ============================================================
+// SCENE: RESULT
+// ============================================================
+function showResultScreen() {
+  state.scene = 'result';
+  const screen = document.getElementById('result-screen');
+  const stageName = document.getElementById('result-stage-name');
+  const grid = document.getElementById('chest-grid');
+
+  stageName.textContent = `${STAGES[state.stageIdx].name} クリア!`;
+  grid.innerHTML = '';
+
+  if (state.chests.length === 0) {
+    grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#aaa;padding:20px">宝箱なし</p>';
+  }
+
+  state.chests.forEach((chest, i) => {
+    const card = document.createElement('div');
+    card.className = 'chest-card';
+    card.innerHTML = `
+      <svg class="chest-svg"><use href="#ico-chest"/></svg>
+      <div class="chest-label">？？？</div>
+    `;
+    card.addEventListener('click', () => openChest(i, card));
+    grid.appendChild(card);
+  });
+
+  screen.classList.remove('hidden');
+  document.getElementById('stage-select').classList.add('hidden');
+}
+
+function openChest(idx, cardEl) {
+  const chest = state.chests[idx];
+  if (chest.opened) return;
+  chest.opened = true;
+
+  const ws = state.weapons[chest.weapon];
+  ws.plus = (ws.plus || 0) + chest.plus;
+  if (RARITY_RANK[chest.rarity] > (RARITY_RANK[ws.rarity] || -1)) {
+    ws.rarity = chest.rarity;
+  }
+  saveProgress();
+
+  const wIcon = chest.weapon === 'sword' ? 'ico-sword' : chest.weapon === 'spear' ? 'ico-spear' : 'ico-hammer';
+  cardEl.classList.add('opened', `rarity-${chest.rarity}`);
+  cardEl.innerHTML = `
+    <svg class="chest-svg" style="display:block;width:30px;height:42px"><use href="#${wIcon}"/></svg>
+    <div class="chest-label">${WEAPONS[chest.weapon].name} +${chest.plus}</div>
+    <div class="rarity-tag" style="color:${RARITY_COLOR[chest.rarity]}">${RARITY_LABEL[chest.rarity]}</div>
+  `;
+  sound.drop();
 }
 
 function onVictory() {
@@ -848,7 +990,6 @@ function render() {
   drawTargetReticle();
 
   if (state.specialFx) drawSpecialFx();
-  if (state.dropFx) drawDropFx();
 
   drawHitCombo();
   drawRoundText();
@@ -1652,7 +1793,15 @@ function bindUi() {
 
   document.getElementById('restart').addEventListener('click', () => {
     hideOverlay();
-    resetState();
+    state.chests = [];
+    renderChestStack();
+    showStageSelect();
+  });
+
+  document.getElementById('result-next').addEventListener('click', () => {
+    state.chests = [];
+    renderChestStack();
+    showStageSelect();
   });
 
   const btnPause = document.getElementById('btn-pause');

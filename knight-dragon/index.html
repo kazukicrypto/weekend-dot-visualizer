@@ -64,12 +64,22 @@
       <rect x="6" y="20" width="4" height="2" fill="#d4a040"/>
       <rect x="6" y="20" width="4" height="1" fill="#ffd870"/>
     </symbol>
+    <symbol id="ico-chest" viewBox="0 0 24 20">
+      <rect x="2" y="6" width="20" height="12" fill="#7a4814"/>
+      <rect x="3" y="7" width="18" height="10" fill="#a5621a"/>
+      <rect x="3" y="11" width="18" height="2" fill="#7a4814"/>
+      <rect x="2" y="2" width="20" height="6" fill="#7a4814"/>
+      <rect x="3" y="3" width="18" height="4" fill="#a5621a"/>
+      <rect x="3" y="3" width="18" height="1" fill="#cc8855"/>
+      <rect x="11" y="9" width="2" height="4" fill="#ffd066"/>
+      <rect x="10" y="11" width="4" height="2" fill="#ffd066"/>
+    </symbol>
   </defs>
 </svg>
 
   <div id="app">
     <div id="game-wrap">
-      <canvas id="game" width="480" height="600"></canvas>
+      <canvas id="game" width="480" height="400"></canvas>
       <div id="topbar">
         <div id="round-pill"><span id="round-num">1/4</span></div>
       </div>
@@ -78,6 +88,7 @@
         <button id="btn-se" class="audio-btn">🔊</button>
         <button id="btn-bgm" class="audio-btn off">🎵</button>
       </div>
+      <div id="chest-stack"></div>
     </div>
 
     <div id="hud">
@@ -100,16 +111,16 @@
             <span class="eq-plus">+1</span>
           </div>
           <button class="move-btn" data-weapon="sword">
-            <div class="move-current">
+            <div class="move-cell current">
               <span class="ap-cost">2</span>
               <svg class="move-icon"><use href="#ico-sword"/></svg>
-              <span class="cur-name">斬り上げ</span>
+              <span class="cell-name">斬り上げ</span>
             </div>
-            <div class="move-next">
-              <span class="next-label">NEXT</span>
-              <span class="next-ap">3</span>
-              <svg class="next-icon"><use href="#ico-sword"/></svg>
-              <span class="next-name">ブリ斬</span>
+            <div class="move-cell next">
+              <span class="next-tag">NEXT</span>
+              <span class="ap-cost">3</span>
+              <svg class="move-icon"><use href="#ico-sword"/></svg>
+              <span class="cell-name">ブリ斬</span>
             </div>
           </button>
         </div>
@@ -121,16 +132,16 @@
             <span class="eq-plus">+2</span>
           </div>
           <button class="move-btn" data-weapon="spear">
-            <div class="move-current">
+            <div class="move-cell current">
               <span class="ap-cost">1</span>
               <svg class="move-icon"><use href="#ico-spear"/></svg>
-              <span class="cur-name">シャベリン</span>
+              <span class="cell-name">シャベリン</span>
             </div>
-            <div class="move-next">
-              <span class="next-label">NEXT</span>
-              <span class="next-ap">2</span>
-              <svg class="next-icon"><use href="#ico-spear"/></svg>
-              <span class="next-name">キック</span>
+            <div class="move-cell next">
+              <span class="next-tag">NEXT</span>
+              <span class="ap-cost">2</span>
+              <svg class="move-icon"><use href="#ico-spear"/></svg>
+              <span class="cell-name">キック</span>
             </div>
           </button>
         </div>
@@ -142,16 +153,16 @@
             <span class="eq-plus">+1</span>
           </div>
           <button class="move-btn" data-weapon="hammer">
-            <div class="move-current">
+            <div class="move-cell current">
               <span class="ap-cost">2</span>
               <svg class="move-icon"><use href="#ico-hammer"/></svg>
-              <span class="cur-name">ふっとばし</span>
+              <span class="cell-name">ふっとばし</span>
             </div>
-            <div class="move-next">
-              <span class="next-label">NEXT</span>
-              <span class="next-ap">3</span>
-              <svg class="next-icon"><use href="#ico-hammer"/></svg>
-              <span class="next-name">大地砕</span>
+            <div class="move-cell next">
+              <span class="next-tag">NEXT</span>
+              <span class="ap-cost">3</span>
+              <svg class="move-icon"><use href="#ico-hammer"/></svg>
+              <span class="cell-name">大地砕</span>
             </div>
           </button>
         </div>
@@ -169,11 +180,31 @@
       </div>
     </div>
 
+    <!-- ===== Stage Select Screen ===== -->
+    <div id="stage-select" class="screen hidden">
+      <div class="screen-inner">
+        <h2 class="screen-title">ステージ選択</h2>
+        <div id="stage-list"></div>
+      </div>
+    </div>
+
+    <!-- ===== Result Screen ===== -->
+    <div id="result-screen" class="screen hidden">
+      <div class="screen-inner">
+        <h2 id="result-title" class="screen-title">STAGE CLEAR!</h2>
+        <p id="result-stage-name"></p>
+        <p class="result-instruction">宝箱をタップして開ける</p>
+        <div id="chest-grid"></div>
+        <button id="result-next" class="big-btn">ステージ選択へ</button>
+      </div>
+    </div>
+
+    <!-- Defeat overlay still uses simple modal -->
     <div id="overlay" class="hidden">
       <div class="overlay-inner">
-        <h1 id="overlay-title">VICTORY</h1>
-        <p id="overlay-text">敵を倒した！</p>
-        <button id="restart">もう一度</button>
+        <h1 id="overlay-title">DEFEAT</h1>
+        <p id="overlay-text">騎士は倒れた...</p>
+        <button id="restart">ステージ選択へ</button>
       </div>
     </div>
   </div>
