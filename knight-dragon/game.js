@@ -249,6 +249,8 @@ let lastTime = 0;
 let shake = 0;
 
 const SAVE_KEY = 'kishidora_save_v2';
+const TYPE_NAMES = { sword: '剣', spear: '槍', hammer: 'ハンマー', shield: '盾' };
+const ITEM_TYPES = ['sword', 'spear', 'hammer', 'shield'];
 
 function loadSave() {
   try {
@@ -261,16 +263,69 @@ function loadSave() {
 function saveProgress() {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
-      weapons: state.weapons,
+      inventory: state.inventory,
+      equipped: state.equipped,
+      nextItemId: state.nextItemId,
       clearedStages: state.clearedStages,
     }));
   } catch (e) {}
 }
 
+function loadAndMigrate() {
+  const raw = loadSave();
+  if (!raw) return null;
+  // Already new format
+  if (raw.inventory && raw.equipped) return raw;
+  // Old format with state.weapons – migrate
+  if (raw.weapons) {
+    const inventory = [];
+    const equipped = {};
+    let id = 1;
+    for (const t of ITEM_TYPES) {
+      const w = raw.weapons[t] || { plus: 0, rarity: 'common' };
+      const item = { id: id++, type: t, rarity: w.rarity || 'common', plus: w.plus || 0 };
+      inventory.push(item);
+      equipped[t] = item.id;
+    }
+    return {
+      inventory,
+      equipped,
+      nextItemId: id,
+      clearedStages: raw.clearedStages || [],
+    };
+  }
+  return null;
+}
+
+function defaultInventory() {
+  let id = 1;
+  const inventory = [];
+  const equipped = {};
+  for (const t of ITEM_TYPES) {
+    const item = { id: id++, type: t, rarity: 'common', plus: 0 };
+    inventory.push(item);
+    equipped[t] = item.id;
+  }
+  return { inventory, equipped, nextItemId: id };
+}
+
+function getEquippedItem(type) {
+  if (!state || !state.equipped) return null;
+  const id = state.equipped[type];
+  return state.inventory.find(i => i.id === id) || null;
+}
+
 function resetState() {
-  const saved = loadSave();
+  const saved = loadAndMigrate();
+  const initial = saved ? {
+    inventory: saved.inventory,
+    equipped: saved.equipped,
+    nextItemId: saved.nextItemId || (Math.max(0, ...saved.inventory.map(i => i.id)) + 1),
+    clearedStages: saved.clearedStages || [],
+  } : { ...defaultInventory(), clearedStages: [] };
+
   state = {
-    scene: 'stageSelect',
+    scene: 'mainMenu',
     knight: createKnight(),
     enemies: [],
     targetIdx: 0,
@@ -284,12 +339,10 @@ function resetState() {
     weakHintTimer: 0,
     weaponHistory: [],
     weaponQueueIdx: { sword: 0, spear: 0, hammer: 0 },
-    weapons: saved && saved.weapons ? saved.weapons : {
-      sword:  { plus: 0, rarity: 'common' },
-      spear:  { plus: 0, rarity: 'common' },
-      hammer: { plus: 0, rarity: 'common' },
-    },
-    clearedStages: saved && saved.clearedStages ? saved.clearedStages : [],
+    inventory: initial.inventory,
+    equipped: initial.equipped,
+    nextItemId: initial.nextItemId,
+    clearedStages: initial.clearedStages,
     chests: [],
     specialFx: null,
     specialFxTimer: 0,
@@ -304,7 +357,7 @@ function resetState() {
     clouds: makeClouds(),
   };
   syncHud();
-  showStageSelect();
+  showMainMenu();
 }
 
 function makeClouds() {
@@ -445,7 +498,8 @@ function attack(weaponKey) {
   const targets = move.aoe ? aliveEnemies() : [getTarget()].filter(Boolean);
   if (targets.length === 0) { syncHud(); return; }
 
-  const enchant = (state.weapons[weaponKey].plus || 0) * 0.08;
+  const equipped = getEquippedItem(weaponKey);
+  const enchant = (equipped ? equipped.plus : 0) * 0.08;
   for (const target of targets) {
     const isWeak = target.weak === weaponKey;
     const crit = target.stunned;
@@ -670,11 +724,17 @@ function rollDrop(forceHigh) {
 }
 
 function addChest(forceHigh) {
-  const keys = ['sword', 'spear', 'hammer'];
-  const target = keys[Math.floor(Math.random() * 3)];
+  // 30% chance shield, otherwise weapon (sword/spear/hammer)
+  let target;
+  if (Math.random() < 0.25) {
+    target = 'shield';
+  } else {
+    const ws = ['sword', 'spear', 'hammer'];
+    target = ws[Math.floor(Math.random() * 3)];
+  }
   const drop = rollDrop(forceHigh);
   state.chests.push({
-    weapon: target,
+    type: target,
     rarity: drop.rarity,
     plus: drop.plus,
     opened: false,
@@ -698,12 +758,157 @@ function renderChestStack() {
 }
 
 // ============================================================
+// SCENE: MAIN MENU
+// ============================================================
+const MENU_SCREENS = ['main-menu', 'stage-select', 'equipment-screen', 'result-screen'];
+function hideAllScreens() {
+  for (const id of MENU_SCREENS) {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
+  }
+}
+
+let _lockToastTimer = null;
+function showLockToast() {
+  let toast = document.getElementById('lock-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'lock-toast';
+    toast.textContent = '🔒 未実装';
+    toast.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(20,20,30,0.95);color:#ffd066;padding:14px 24px;border-radius:8px;border:2px solid #8b6940;font-weight:bold;z-index:50;font-size:14px;letter-spacing:2px;pointer-events:none;transition:opacity 0.2s;';
+    document.body.appendChild(toast);
+  }
+  toast.style.opacity = '1';
+  toast.style.display = 'block';
+  if (_lockToastTimer) clearTimeout(_lockToastTimer);
+  _lockToastTimer = setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => { toast.style.display = 'none'; }, 220);
+  }, 900);
+  sound.early();
+}
+
+function showMainMenu() {
+  state.scene = 'mainMenu';
+  hideOverlay();
+  hideAllScreens();
+  document.getElementById('main-menu').classList.remove('hidden');
+  // Update menu status
+  const cleared = (state.clearedStages || []).length;
+  const totalEl = document.getElementById('menu-total');
+  const clearedEl = document.getElementById('menu-cleared');
+  const rankEl = document.getElementById('status-rank-num');
+  const coinEl = document.getElementById('status-coin');
+  if (totalEl) totalEl.textContent = STAGES.length;
+  if (clearedEl) clearedEl.textContent = cleared;
+  if (rankEl) rankEl.textContent = cleared + 1;
+  if (coinEl) coinEl.textContent = cleared * 250;
+}
+
+// ============================================================
+// SCENE: EQUIPMENT
+// ============================================================
+function showEquipmentScreen() {
+  state.scene = 'equipment';
+  hideOverlay();
+  hideAllScreens();
+  document.getElementById('equipment-screen').classList.remove('hidden');
+  renderEquippedGrid();
+  renderInventoryList();
+}
+
+function renderEquippedGrid() {
+  const grid = document.getElementById('equipped-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  for (const t of ITEM_TYPES) {
+    const item = getEquippedItem(t);
+    const card = document.createElement('div');
+    const rarity = item ? item.rarity : 'common';
+    card.className = `equip-card rarity-${rarity}`;
+    card.innerHTML = `
+      <svg class="equip-icon"><use href="#ico-${t}"/></svg>
+      <div class="equip-meta">
+        <div class="equip-slot-label">${TYPE_NAMES[t]}</div>
+        <div class="equip-name">${item ? `${TYPE_NAMES[t]}` : '未装備'}</div>
+        ${item ? `<div class="equip-stats"><span class="rarity-tag">${RARITY_LABEL[item.rarity]}</span><span class="plus-tag">+${item.plus}</span></div>` : ''}
+      </div>
+    `;
+    grid.appendChild(card);
+  }
+}
+
+function renderInventoryList() {
+  const list = document.getElementById('inventory-list');
+  if (!list) return;
+  list.innerHTML = '';
+
+  const grouped = { sword: [], spear: [], hammer: [], shield: [] };
+  for (const item of state.inventory) {
+    if (grouped[item.type]) grouped[item.type].push(item);
+  }
+
+  let totalShown = 0;
+  for (const t of ITEM_TYPES) {
+    const items = grouped[t].slice();
+    if (items.length === 0) continue;
+    items.sort((a, b) => (RARITY_RANK[b.rarity] - RARITY_RANK[a.rarity]) || (b.plus - a.plus));
+
+    const section = document.createElement('div');
+    section.className = 'inv-section';
+    const heading = document.createElement('h4');
+    heading.textContent = `${TYPE_NAMES[t]} (${items.length})`;
+    section.appendChild(heading);
+
+    const itemsDiv = document.createElement('div');
+    itemsDiv.className = 'inv-items';
+
+    for (const item of items) {
+      const isEquipped = state.equipped[t] === item.id;
+      const card = document.createElement('button');
+      card.className = `inv-item rarity-${item.rarity}${isEquipped ? ' equipped' : ''}`;
+      card.innerHTML = `
+        <svg><use href="#ico-${t}"/></svg>
+        <div class="inv-info">
+          <span class="rarity-tag">${RARITY_LABEL[item.rarity]}</span>
+          <span class="plus-tag">+${item.plus}</span>
+        </div>
+        ${isEquipped ? '<div class="equipped-badge">装備中</div>' : ''}
+      `;
+      if (!isEquipped) {
+        card.addEventListener('click', () => equipItem(item.id));
+      }
+      itemsDiv.appendChild(card);
+      totalShown++;
+    }
+
+    section.appendChild(itemsDiv);
+    list.appendChild(section);
+  }
+
+  if (totalShown === 0) {
+    list.innerHTML = '<p style="text-align:center;color:#aaa;padding:14px">所持品なし<br><span style="font-size:11px">ステージで宝箱を獲得しよう</span></p>';
+  }
+}
+
+function equipItem(itemId) {
+  const item = state.inventory.find(i => i.id === itemId);
+  if (!item) return;
+  state.equipped[item.type] = itemId;
+  sound.drop();
+  saveProgress();
+  renderEquippedGrid();
+  renderInventoryList();
+  syncHud();
+}
+
+// ============================================================
 // SCENE: STAGE SELECT
 // ============================================================
 function showStageSelect() {
   state.scene = 'stageSelect';
   hideOverlay();
-  document.getElementById('result-screen').classList.add('hidden');
+  hideAllScreens();
   document.getElementById('stage-select').classList.remove('hidden');
 
   const list = document.getElementById('stage-list');
@@ -744,8 +949,7 @@ function startStage(idx) {
   state.hitCombo = 0;
   state.hitComboTimer = 0;
   state.paused = false;
-  document.getElementById('stage-select').classList.add('hidden');
-  document.getElementById('result-screen').classList.add('hidden');
+  hideAllScreens();
   hideOverlay();
   spawnRound();
   renderChestStack();
@@ -779,6 +983,11 @@ function showResultScreen() {
     grid.appendChild(card);
   });
 
+  // backwards compat: chests may have legacy 'weapon' field
+  for (const c of state.chests) {
+    if (!c.type && c.weapon) c.type = c.weapon;
+  }
+
   screen.classList.remove('hidden');
   document.getElementById('stage-select').classList.add('hidden');
 }
@@ -787,22 +996,37 @@ function openChest(idx, cardEl) {
   const chest = state.chests[idx];
   if (chest.opened) return;
   chest.opened = true;
+  // Allow legacy chests (where field was 'weapon')
+  const type = chest.type || chest.weapon;
 
-  const ws = state.weapons[chest.weapon];
-  ws.plus = (ws.plus || 0) + chest.plus;
-  if (RARITY_RANK[chest.rarity] > (RARITY_RANK[ws.rarity] || -1)) {
-    ws.rarity = chest.rarity;
-  }
+  // Create a new item and add to inventory
+  const newItem = {
+    id: state.nextItemId++,
+    type,
+    rarity: chest.rarity,
+    plus: chest.plus,
+  };
+  state.inventory.push(newItem);
+
+  // Auto-equip if better than current
+  const cur = getEquippedItem(type);
+  const better = !cur || RARITY_RANK[newItem.rarity] > RARITY_RANK[cur.rarity] ||
+    (newItem.rarity === cur.rarity && newItem.plus > cur.plus);
+  if (better) state.equipped[type] = newItem.id;
+
   saveProgress();
 
-  const wIcon = chest.weapon === 'sword' ? 'ico-sword' : chest.weapon === 'spear' ? 'ico-spear' : 'ico-hammer';
+  const iconId = `ico-${type}`;
+  const equippedNote = better ? '<div class="equipped-badge" style="position:relative;top:auto;right:auto;display:inline-block;margin-top:4px">装備!</div>' : '';
   cardEl.classList.add('opened', `rarity-${chest.rarity}`);
   cardEl.innerHTML = `
-    <svg class="chest-svg" style="display:block;width:30px;height:42px"><use href="#${wIcon}"/></svg>
-    <div class="chest-label">${WEAPONS[chest.weapon].name} +${chest.plus}</div>
+    <svg class="chest-svg" style="display:block;width:30px;height:42px"><use href="#${iconId}"/></svg>
+    <div class="chest-label">${TYPE_NAMES[type]} +${chest.plus}</div>
     <div class="rarity-tag" style="color:${RARITY_COLOR[chest.rarity]}">${RARITY_LABEL[chest.rarity]}</div>
+    ${equippedNote}
   `;
   sound.drop();
+  syncHud();
 }
 
 function onVictory() {
@@ -890,15 +1114,17 @@ function syncHud() {
     rn.textContent = `${state.roundIdx + 1}/${stage.rounds.length}`;
   }
 
-  // Equipment slots (rarity + plus)
+  // Equipment slots (rarity + plus) – read from equipped items
   for (const wKey of ['sword', 'spear', 'hammer']) {
     const slot = document.querySelector(`.weapon-col[data-weapon="${wKey}"] .eq-slot`);
     if (!slot) continue;
-    const ws = state.weapons[wKey];
+    const item = getEquippedItem(wKey);
+    const rarity = item ? item.rarity : 'common';
+    const plus = item ? item.plus : 0;
     slot.classList.remove('rarity-common', 'rarity-r', 'rarity-sr', 'rarity-ur');
-    slot.classList.add(`rarity-${ws.rarity || 'common'}`);
+    slot.classList.add(`rarity-${rarity}`);
     const plusEl = slot.querySelector('.eq-plus');
-    if (plusEl) plusEl.textContent = `+${ws.plus || 0}`;
+    if (plusEl) plusEl.textContent = `+${plus}`;
   }
 
   // Meat count
@@ -1805,14 +2031,36 @@ function bindUi() {
     hideOverlay();
     state.chests = [];
     renderChestStack();
-    showStageSelect();
+    showMainMenu();
   });
 
   document.getElementById('result-next').addEventListener('click', () => {
     state.chests = [];
     renderChestStack();
-    showStageSelect();
+    showMainMenu();
   });
+
+  // Stage-select back
+  const stageBack = document.getElementById('stage-back');
+  if (stageBack) stageBack.addEventListener('click', () => { ensureAudio(); showMainMenu(); });
+
+  // Equipment-screen back
+  const equipBack = document.getElementById('equipment-back');
+  if (equipBack) equipBack.addEventListener('click', () => { ensureAudio(); showMainMenu(); });
+
+  // Main menu icons
+  for (const btn of document.querySelectorAll('.menu-btn')) {
+    btn.addEventListener('click', () => {
+      ensureAudio();
+      if (btn.classList.contains('locked')) {
+        showLockToast();
+        return;
+      }
+      const which = btn.dataset.menu;
+      if (which === 'oshigoto') showStageSelect();
+      else if (which === 'souvi') showEquipmentScreen();
+    });
+  }
 
   const btnPause = document.getElementById('btn-pause');
   btnPause.addEventListener('click', () => { ensureAudio(); togglePause(); });

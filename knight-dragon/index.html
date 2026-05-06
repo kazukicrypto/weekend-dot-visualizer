@@ -74,6 +74,20 @@
       <rect x="11" y="9" width="2" height="4" fill="#ffd066"/>
       <rect x="10" y="11" width="4" height="2" fill="#ffd066"/>
     </symbol>
+    <symbol id="ico-shield" viewBox="0 0 16 24">
+      <rect x="3" y="2" width="10" height="2" fill="#80c0ff"/>
+      <rect x="2" y="4" width="12" height="10" fill="#5fb0e8"/>
+      <rect x="2" y="4" width="12" height="2" fill="#a0d4f8"/>
+      <rect x="3" y="14" width="10" height="3" fill="#3a90c8"/>
+      <rect x="5" y="17" width="6" height="2" fill="#2a7098"/>
+      <rect x="6" y="19" width="4" height="1" fill="#1a5078"/>
+      <rect x="1" y="3" width="1" height="13" fill="#3a5078"/>
+      <rect x="14" y="3" width="1" height="13" fill="#3a5078"/>
+      <rect x="6" y="6" width="4" height="6" fill="#ffd066"/>
+      <rect x="7" y="7" width="2" height="4" fill="#ffe080"/>
+      <rect x="2" y="2" width="2" height="2" fill="#3a5078"/>
+      <rect x="12" y="2" width="2" height="2" fill="#3a5078"/>
+    </symbol>
   </defs>
 </svg>
 
@@ -180,11 +194,84 @@
       </div>
     </div>
 
+    <!-- ===== Main Menu ===== -->
+    <div id="main-menu" class="screen hidden">
+      <div class="menu-frame">
+        <div class="menu-statusbar">
+          <div class="status-left">
+            <div class="status-rank">ランク <span id="status-rank-num">1</span></div>
+          </div>
+          <div class="status-right">
+            <div class="status-coin">💰 <span id="status-coin">0</span></div>
+          </div>
+        </div>
+
+        <div class="menu-canvas">
+          <h1 class="menu-title">騎士ドラ風</h1>
+          <p class="menu-sub">クリア済 <span id="menu-cleared">0</span> / <span id="menu-total">3</span> ステージ</p>
+          <div class="menu-castle">
+            <div class="castle-emoji">🏰</div>
+            <div class="menu-hint">下のメニューから選択</div>
+          </div>
+        </div>
+
+        <div class="menu-bar">
+          <button class="menu-btn" data-menu="oshigoto">
+            <div class="menu-icon">🏰</div>
+            <div class="menu-label">おしごと</div>
+          </button>
+          <button class="menu-btn locked" data-menu="quest">
+            <div class="menu-icon">⚔️</div>
+            <div class="menu-label">クエスト</div>
+            <div class="lock">🔒</div>
+          </button>
+          <button class="menu-btn" data-menu="souvi">
+            <div class="menu-icon">🛡️</div>
+            <div class="menu-label">そうび</div>
+          </button>
+          <button class="menu-btn locked" data-menu="friend">
+            <div class="menu-icon">👻</div>
+            <div class="menu-label">フレンド</div>
+            <div class="lock">🔒</div>
+          </button>
+          <button class="menu-btn locked" data-menu="shop">
+            <div class="menu-icon">💛</div>
+            <div class="menu-label">ショップ</div>
+            <div class="lock">🔒</div>
+          </button>
+          <button class="menu-btn locked" data-menu="treasure">
+            <div class="menu-icon">📦</div>
+            <div class="menu-label">お宝屋</div>
+            <div class="lock">🔒</div>
+          </button>
+          <button class="menu-btn locked" data-menu="other">
+            <div class="menu-icon">⋯</div>
+            <div class="menu-label">その他</div>
+            <div class="lock">🔒</div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Equipment Screen ===== -->
+    <div id="equipment-screen" class="screen hidden">
+      <div class="screen-inner">
+        <h2 class="screen-title">そうび</h2>
+        <p class="result-instruction">所持品をタップして装備変更</p>
+        <div id="equipped-grid"></div>
+        <h3 class="section-title">所持品</h3>
+        <div id="inventory-list"></div>
+        <button id="equipment-back" class="big-btn">メニューへ戻る</button>
+      </div>
+    </div>
+
     <!-- ===== Stage Select Screen ===== -->
     <div id="stage-select" class="screen hidden">
       <div class="screen-inner">
-        <h2 class="screen-title">ステージ選択</h2>
+        <h2 class="screen-title">おしごと</h2>
+        <p class="result-instruction">ステージを選んで挑戦</p>
         <div id="stage-list"></div>
+        <button id="stage-back" class="big-btn">メニューへ戻る</button>
       </div>
     </div>
 
@@ -195,7 +282,7 @@
         <p id="result-stage-name"></p>
         <p class="result-instruction">宝箱をタップして開ける</p>
         <div id="chest-grid"></div>
-        <button id="result-next" class="big-btn">ステージ選択へ</button>
+        <button id="result-next" class="big-btn">メニューへ戻る</button>
       </div>
     </div>
 
@@ -204,7 +291,7 @@
       <div class="overlay-inner">
         <h1 id="overlay-title">DEFEAT</h1>
         <p id="overlay-text">騎士は倒れた...</p>
-        <button id="restart">ステージ選択へ</button>
+        <button id="restart">メニューへ戻る</button>
       </div>
     </div>
   </div>
