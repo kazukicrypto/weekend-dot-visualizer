@@ -1,5 +1,9 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+:root {
+  --vh: 100vh;
+}
+
 html, body {
   height: 100%;
   background: #0a0a14;
@@ -15,7 +19,8 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  min-height: 100vh;
+  min-height: var(--vh);
+  min-height: 100dvh;
   padding: 4px;
   padding-bottom: env(safe-area-inset-bottom, 4px);
   padding-top: env(safe-area-inset-top, 4px);
@@ -527,7 +532,11 @@ html, body {
   justify-content: center;
   z-index: 15;
   padding: 20px;
+  padding-top: max(env(safe-area-inset-top, 12px), 12px);
+  padding-bottom: max(env(safe-area-inset-bottom, 12px), 12px);
   overflow-y: auto;
+  height: var(--vh);
+  height: 100dvh;
 }
 
 .screen.hidden { display: none; }
@@ -917,9 +926,51 @@ html, body {
   border-radius: 8px;
   padding: 10px;
   display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.equip-head {
+  display: flex;
   align-items: center;
   gap: 8px;
 }
+
+.equip-effects {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 4px;
+  padding: 4px 6px;
+  border: 1px solid rgba(255,208,102,0.2);
+}
+
+.equip-effects.empty {
+  color: #888;
+  font-size: 11px;
+  text-align: center;
+  font-style: italic;
+}
+
+.eff-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+
+.eff-label { color: #ffe0a0; font-weight: bold; }
+.eff-value {
+  color: #80ff80;
+  font-weight: 900;
+  font-family: 'Helvetica Neue', monospace;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.equip-card.rarity-r .eff-value      { color: #80c0ff; }
+.equip-card.rarity-sr .eff-value     { color: #d090ff; }
+.equip-card.rarity-ur .eff-value     { color: #ffe040; text-shadow: 0 0 4px rgba(255,224,64,0.6), 1px 1px 0 #000; }
 
 .equip-card .equip-icon {
   width: 32px;
