@@ -363,6 +363,8 @@ function saveProgress() {
       clearedStages: state.clearedStages,
       level: state.level,
       exp: state.exp,
+      gold: state.gold,
+      meatCount: state.meatCount,
     }));
   } catch (e) {}
 }
@@ -431,6 +433,7 @@ function resetState() {
     scene: 'mainMenu',
     level: (saved && saved.level) || 1,
     exp: (saved && saved.exp) || 0,
+    gold: (saved && saved.gold) || 0,
     knight: null,
     enemies: [],
     targetIdx: 0,
@@ -453,7 +456,7 @@ function resetState() {
     specialFxTimer: 0,
     hitCombo: 0,
     hitComboTimer: 0,
-    meatCount: 2,
+    meatCount: (saved && typeof saved.meatCount === 'number') ? saved.meatCount : 2,
     paused: false,
     roundTransition: 0,
     showRoundText: 0,
@@ -679,6 +682,14 @@ function attack(weaponKey) {
       state.weakHint = `${move.name} は ${target.name} の弱点!`;
       state.weakHintTimer = 1.0;
     }
+
+    // Gold drop on kill
+    if (target.hp <= 0 && !target._goldGiven) {
+      target._goldGiven = true;
+      const reward = Math.max(2, Math.floor(target.maxHp / 8));
+      state.gold = (state.gold || 0) + reward;
+      addFloat(`💰+${reward}`, target.x, target.y - 18, '#ffd066', 1.0, 14);
+    }
   }
 
   // Hit combo
@@ -728,6 +739,12 @@ function fireSpecial(special) {
         en.hp = Math.max(0, en.hp - perHit);
         en.hitTimer = 0.3;
         addFloat(`-${perHit}`, en.x + (Math.random() * 30 - 15), en.y - 30 - h * 14, special.color, 0.85, 22);
+        if (en.hp <= 0 && !en._goldGiven) {
+          en._goldGiven = true;
+          const reward = Math.max(2, Math.floor(en.maxHp / 8));
+          state.gold = (state.gold || 0) + reward;
+          addFloat(`💰+${reward}`, en.x, en.y - 18, '#ffd066', 1.0, 14);
+        }
       }
       shake = Math.min(20, shake + 4);
       if (aliveEnemies().length === 0) onRoundClear();
@@ -781,6 +798,7 @@ function useMeat() {
   state.knight.ap = state.knight.maxAp;
   sound.meat();
   addFloat('AP MAX!', state.knight.x, state.knight.y - 60, '#ffd066', 1.0, 22);
+  saveProgress();
   syncHud();
 }
 
@@ -858,6 +876,10 @@ function onStageClear() {
   const expGained = 60 + state.stageIdx * 40;
   state._expGained = expGained;
   state._levelsGained = gainExp(expGained);
+  // Stage clear gold bonus
+  const goldGained = 80 + state.stageIdx * 60;
+  state.gold = (state.gold || 0) + goldGained;
+  state._goldGained = goldGained;
   saveProgress();
   showResultScreen();
 }
@@ -916,7 +938,7 @@ function renderChestStack() {
 // ============================================================
 // SCENE: MAIN MENU
 // ============================================================
-const MENU_SCREENS = ['main-menu', 'stage-select', 'equipment-screen', 'result-screen'];
+const MENU_SCREENS = ['main-menu', 'stage-select', 'equipment-screen', 'result-screen', 'shop-screen'];
 function hideAllScreens() {
   for (const id of MENU_SCREENS) {
     const el = document.getElementById(id);
@@ -957,8 +979,8 @@ function showMainMenu() {
   const coinEl = document.getElementById('status-coin');
   if (totalEl) totalEl.textContent = STAGES.length;
   if (clearedEl) clearedEl.textContent = cleared;
-  if (rankEl) rankEl.textContent = cleared + 1;
-  if (coinEl) coinEl.textContent = cleared * 250;
+  if (rankEl) rankEl.textContent = state.level;
+  if (coinEl) coinEl.textContent = state.gold || 0;
 }
 
 // ============================================================
@@ -1062,6 +1084,121 @@ function equipItem(itemId) {
 // ============================================================
 // SCENE: STAGE SELECT
 // ============================================================
+// ============================================================
+// SCENE: SHOP
+// ============================================================
+const SHOP_ITEMS = [
+  { id: 'meat',    icon: '🍖', name: 'マンガ肉', desc: '次のステージにマンガ肉×1を追加', cost: 80,   action: 'meat' },
+  { id: 'r',       icon: '🎁', name: '武器ガチャ',     desc: 'レア(R)以上の武器1点が確定', cost: 250,  action: 'gacha_r',  rarity: 'r' },
+  { id: 'sr',      icon: '⭐', name: 'SR武器ガチャ',    desc: 'SR以上の武器1点が確定',     cost: 1200, action: 'gacha_sr', rarity: 'sr' },
+  { id: 'ur',      icon: '🌟', name: 'UR武器ガチャ',    desc: 'UR武器1点が確定',           cost: 6000, action: 'gacha_ur', rarity: 'ur' },
+];
+
+function showShopScreen() {
+  state.scene = 'shop';
+  hideOverlay();
+  hideAllScreens();
+  document.getElementById('shop-screen').classList.remove('hidden');
+  renderShopList();
+}
+
+function renderShopList() {
+  const goldEl = document.getElementById('shop-gold');
+  if (goldEl) goldEl.textContent = state.gold || 0;
+  const list = document.getElementById('shop-list');
+  if (!list) return;
+  list.innerHTML = '';
+  for (const item of SHOP_ITEMS) {
+    const el = document.createElement('div');
+    const rarityClass = item.rarity ? ` rarity-${item.rarity}` : '';
+    el.className = `shop-item${rarityClass}`;
+    el.innerHTML = `
+      <div class="shop-icon">${item.icon}</div>
+      <div class="shop-meta">
+        <div class="shop-name">${item.name}</div>
+        <div class="shop-desc">${item.desc}</div>
+      </div>
+      <button class="shop-buy" data-action="${item.action}">買う<span class="price">💰 ${item.cost}</span></button>
+    `;
+    const btn = el.querySelector('.shop-buy');
+    btn.disabled = (state.gold || 0) < item.cost;
+    btn.addEventListener('click', () => buyShopItem(item));
+    list.appendChild(el);
+  }
+}
+
+function buyShopItem(item) {
+  if ((state.gold || 0) < item.cost) return;
+  state.gold -= item.cost;
+  if (item.action === 'meat') {
+    state.meatCount = (state.meatCount || 0) + 1;
+    showShopToast('🍖 マンガ肉 を入手！\n次のバトルで使えます');
+  } else if (item.action === 'gacha_r') {
+    const got = rollShopGacha('r');
+    showShopToast(`${got.name} +${got.plus}\n[${RARITY_LABEL[got.rarity]}] を入手!`);
+  } else if (item.action === 'gacha_sr') {
+    const got = rollShopGacha('sr');
+    showShopToast(`${got.name} +${got.plus}\n[${RARITY_LABEL[got.rarity]}] を入手!`);
+  } else if (item.action === 'gacha_ur') {
+    const got = rollShopGacha('ur');
+    showShopToast(`★ ${got.name} +${got.plus}\n[${RARITY_LABEL[got.rarity]}] を入手! ★`);
+  }
+  sound.drop();
+  saveProgress();
+  renderShopList();
+}
+
+function rollShopGacha(minRarity) {
+  const types = ITEM_TYPES;
+  const type = types[Math.floor(Math.random() * types.length)];
+  let rarity, plus;
+  if (minRarity === 'ur') {
+    rarity = 'ur'; plus = 5;
+  } else if (minRarity === 'sr') {
+    const r = Math.random();
+    if (r < 0.20) { rarity = 'ur'; plus = 4; }
+    else { rarity = 'sr'; plus = 3; }
+  } else { // 'r'
+    const r = Math.random();
+    if (r < 0.05) { rarity = 'ur'; plus = 4; }
+    else if (r < 0.25) { rarity = 'sr'; plus = 3; }
+    else { rarity = 'r'; plus = 2; }
+  }
+  const newItem = {
+    id: state.nextItemId++,
+    type,
+    rarity,
+    plus,
+    name: itemName(type, rarity),
+  };
+  state.inventory.push(newItem);
+  // Auto-equip if better
+  const cur = getEquippedItem(type);
+  const better = !cur || RARITY_RANK[rarity] > RARITY_RANK[cur.rarity] ||
+    (rarity === cur.rarity && plus > cur.plus);
+  if (better) state.equipped[type] = newItem.id;
+  return newItem;
+}
+
+function showShopToast(text) {
+  let toast = document.getElementById('shop-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'shop-toast';
+    document.body.appendChild(toast);
+  }
+  toast.innerHTML = text.replace(/\n/g, '<br>');
+  toast.style.opacity = '1';
+  toast.style.display = 'block';
+  toast.style.transform = 'translate(-50%, -50%) scale(1.06)';
+  setTimeout(() => { toast.style.transform = 'translate(-50%, -50%) scale(1)'; }, 80);
+  if (window._shopToastT) clearTimeout(window._shopToastT);
+  window._shopToastT = setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => { toast.style.display = 'none'; }, 320);
+  }, 1800);
+}
+
 function showStageSelect() {
   state.scene = 'stageSelect';
   hideOverlay();
@@ -1100,7 +1237,8 @@ function startStage(idx) {
   state.roundIdx = 0;
   state.knight = createKnight();
   state.chests = [];
-  state.meatCount = 2;
+  // Always have at least 2 meat to start; carry shop purchases beyond that
+  state.meatCount = Math.max(state.meatCount || 0, 2);
   state.weaponHistory = [];
   state.weaponQueueIdx = { sword: 0, spear: 0, hammer: 0 };
   state.hitCombo = 0;
@@ -1130,9 +1268,13 @@ function showResultScreen() {
     statusLine += `   +${state._expGained} EXP`;
     if (state._levelsGained) statusLine += `   ★ Lv ${state.level} に上昇!`;
   }
+  if (state._goldGained) {
+    statusLine += `   💰 +${state._goldGained}`;
+  }
   stageName.textContent = statusLine;
   state._expGained = 0;
   state._levelsGained = 0;
+  state._goldGained = 0;
   grid.innerHTML = '';
 
   // backwards compat: chests may have legacy 'weapon' field
@@ -2318,6 +2460,10 @@ function bindUi() {
   const equipBack = document.getElementById('equipment-back');
   if (equipBack) equipBack.addEventListener('click', () => { ensureAudio(); showMainMenu(); });
 
+  // Shop back
+  const shopBack = document.getElementById('shop-back');
+  if (shopBack) shopBack.addEventListener('click', () => { ensureAudio(); showMainMenu(); });
+
   // Main menu icons
   for (const btn of document.querySelectorAll('.menu-btn')) {
     btn.addEventListener('click', () => {
@@ -2329,6 +2475,7 @@ function bindUi() {
       const which = btn.dataset.menu;
       if (which === 'oshigoto') showStageSelect();
       else if (which === 'souvi') showEquipmentScreen();
+      else if (which === 'shop') showShopScreen();
     });
   }
 

@@ -1046,6 +1046,124 @@ html, body {
   border-color: #8b6940;
 }
 
+/* ===== Shop ===== */
+.shop-balance {
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+  color: #ffd066;
+  margin-bottom: 14px;
+  text-shadow: 1px 1px 0 #000;
+  background: rgba(0,0,0,0.3);
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #8b6940;
+}
+.shop-balance .gold-icon { font-size: 20px; margin: 0 4px; }
+.shop-balance #shop-gold { font-size: 22px; font-weight: 900; }
+
+#shop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.shop-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(180deg, #4a3520 0%, #2a1a10 100%);
+  border: 2px solid #8b6940;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.shop-item.rarity-r  { border-color: #5fb0e8; box-shadow: 0 0 6px rgba(95,176,232,0.3); }
+.shop-item.rarity-sr { border-color: #d090ff; box-shadow: 0 0 8px rgba(208,144,255,0.4); }
+.shop-item.rarity-ur { border-color: #ffd066; box-shadow: 0 0 10px rgba(255,208,102,0.5); animation: ur-pulse 1.6s ease-in-out infinite; }
+
+.shop-item .shop-icon {
+  font-size: 30px;
+  width: 40px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.shop-item .shop-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.shop-item .shop-name {
+  font-size: 14px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 1px 1px 0 #000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shop-item .shop-desc {
+  font-size: 10px;
+  color: #aaa;
+  margin-top: 2px;
+}
+
+.shop-buy {
+  font-family: inherit;
+  background: linear-gradient(180deg, #5080d0 0%, #2a508a 100%);
+  border: 2px solid #80a0e0;
+  color: #fff;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 11px;
+  text-align: center;
+  flex-shrink: 0;
+  min-width: 70px;
+  transition: transform 0.05s;
+}
+
+.shop-buy:active:not(:disabled) { transform: scale(0.96); }
+.shop-buy:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(0.5); }
+
+.shop-buy .price {
+  display: block;
+  font-size: 11px;
+  font-weight: 900;
+  color: #ffd066;
+  margin-top: 2px;
+}
+
+#shop-back {
+  background: linear-gradient(180deg, #6b4d2a 0%, #3a2410 100%);
+  border-color: #8b6940;
+}
+
+#shop-toast {
+  position: fixed;
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(20, 20, 30, 0.96);
+  color: #ffd066;
+  padding: 16px 24px;
+  border-radius: 10px;
+  border: 2px solid #ffd066;
+  font-weight: bold;
+  z-index: 50;
+  font-size: 14px;
+  letter-spacing: 1px;
+  pointer-events: none;
+  transition: opacity 0.3s, transform 0.3s;
+  text-align: center;
+  max-width: 80%;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+}
+
 /* ===== Defeat overlay (small modal) ===== */
 #overlay {
   position: fixed;
