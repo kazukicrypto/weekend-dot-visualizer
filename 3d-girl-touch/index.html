@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#1a1030" />
+<title>ふれあい3Dガール</title>
+<style>
+  :root {
+    --accent: #ff6fae;
+    --accent2: #8a7cff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #1a1030;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Segoe UI", sans-serif;
+    overscroll-behavior: none;
+    touch-action: none;
+    -webkit-user-select: none; user-select: none;
+  }
+  #app { position: fixed; inset: 0; }
+  canvas { display: block; touch-action: none; }
+
+  /* Header */
+  #title {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 12px);
+    left: 0; right: 0;
+    text-align: center;
+    color: #fff;
+    pointer-events: none;
+    z-index: 5;
+  }
+  #title h1 {
+    font-size: clamp(18px, 5vw, 26px);
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-shadow: 0 2px 10px rgba(0,0,0,.5);
+  }
+  #title p {
+    margin-top: 4px;
+    font-size: clamp(11px, 3vw, 13px);
+    opacity: .8;
+  }
+
+  /* Affection meter */
+  #meter {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 64px);
+    left: 50%; transform: translateX(-50%);
+    width: min(72vw, 320px);
+    z-index: 5;
+    pointer-events: none;
+  }
+  #meter .label {
+    display: flex; justify-content: space-between;
+    color: #fff; font-size: 12px; margin-bottom: 4px;
+    text-shadow: 0 1px 4px rgba(0,0,0,.6);
+  }
+  #meter .bar {
+    height: 10px; border-radius: 99px;
+    background: rgba(255,255,255,.15);
+    overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.3);
+  }
+  #meter .fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    border-radius: 99px;
+    transition: width .4s cubic-bezier(.22,1,.36,1);
+  }
+
+  /* Speech bubble */
+  #speech {
+    position: fixed;
+    left: 50%; transform: translateX(-50%) translateY(10px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 120px);
+    background: rgba(255,255,255,.95);
+    color: #3a2a45;
+    padding: 10px 18px;
+    border-radius: 18px;
+    font-size: clamp(14px, 4vw, 17px);
+    font-weight: 700;
+    max-width: 80vw;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(0,0,0,.35);
+    opacity: 0;
+    transition: opacity .25s ease, transform .25s ease;
+    z-index: 6;
+    pointer-events: none;
+  }
+  #speech.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #speech::after {
+    content: ""; position: absolute; bottom: -8px; left: 50%;
+    transform: translateX(-50%);
+    border: 8px solid transparent;
+    border-top-color: rgba(255,255,255,.95);
+    border-bottom: 0;
+  }
+
+  /* Controls */
+  #controls {
+    position: fixed;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+    left: 0; right: 0;
+    display: flex; justify-content: center; gap: 10px;
+    flex-wrap: wrap;
+    padding: 0 12px;
+    z-index: 7;
+  }
+  .btn {
+    appearance: none; border: none;
+    background: rgba(255,255,255,.12);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #fff;
+    font-size: 13px; font-weight: 700;
+    padding: 12px 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,.18);
+    cursor: pointer;
+    transition: transform .12s ease, background .2s ease;
+    min-width: 64px;
+  }
+  .btn:active { transform: scale(.93); background: rgba(255,255,255,.22); }
+  .btn .ico { font-size: 18px; display: block; margin-bottom: 2px; }
+
+  /* Hint */
+  #hint {
+    position: fixed;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 84px);
+    left: 50%; transform: translateX(-50%);
+    color: #fff; opacity: .65;
+    font-size: 12px;
+    z-index: 5;
+    pointer-events: none;
+    text-shadow: 0 1px 4px rgba(0,0,0,.6);
+    transition: opacity .6s ease;
+  }
+
+  /* Loading */
+  #loader {
+    position: fixed; inset: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px;
+    background: radial-gradient(circle at 50% 40%, #2a1a4a, #150a26);
+    color: #fff; transition: opacity .5s ease;
+  }
+  #loader.hide { opacity: 0; pointer-events: none; }
+  .spinner {
+    width: 44px; height: 44px;
+    border: 4px solid rgba(255,255,255,.2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="title">
+  <h1>ふれあい3Dガール</h1>
+  <p>ドラッグで回転 / ピンチでズーム / タップでふれあい</p>
+</div>
+
+<div id="meter">
+  <div class="label"><span>なかよし度</span><span id="meterPct">0%</span></div>
+  <div class="bar"><div class="fill" id="meterFill"></div></div>
+</div>
+
+<div id="speech"></div>
+<div id="hint">画面のキャラをタップしてみよう！</div>
+
+<div id="controls">
+  <button class="btn" id="btnWave"><span class="ico">👋</span>あいさつ</button>
+  <button class="btn" id="btnDance"><span class="ico">💃</span>ダンス</button>
+  <button class="btn" id="btnReset"><span class="ico">🔄</span>視点</button>
+</div>
+
+<div id="loader">
+  <div class="spinner"></div>
+  <div>よみこみ中…</div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ---------- Scene setup ----------
+const app = document.getElementById('app');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1030);
+scene.fog = new THREE.Fog(0x1a1030, 9, 18);
+
+const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 100);
+const DEFAULT_CAM = new THREE.Vector3(0, 1.7, 5.2);
+camera.position.copy(DEFAULT_CAM);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+app.appendChild(renderer.domElement);
+
+// ---------- Lights ----------
+scene.add(new THREE.HemisphereLight(0xffd9f0, 0x3a2a55, 0.9));
+const key = new THREE.DirectionalLight(0xffffff, 1.3);
+key.position.set(3, 6, 5);
+key.castShadow = true;
+key.shadow.mapSize.set(1024, 1024);
+key.shadow.camera.near = 1; key.shadow.camera.far = 20;
+key.shadow.camera.left = -5; key.shadow.camera.right = 5;
+key.shadow.camera.top = 5; key.shadow.camera.bottom = -5;
+scene.add(key);
+const rim = new THREE.DirectionalLight(0x8a7cff, 0.6);
+rim.position.set(-4, 3, -4);
+scene.add(rim);
+const fillLight = new THREE.PointLight(0xff6fae, 0.5, 20);
+fillLight.position.set(-2, 2, 3);
+scene.add(fillLight);
+
+// ---------- Ground ----------
+const ground = new THREE.Mesh(
+  new THREE.CircleGeometry(6, 64),
+  new THREE.MeshStandardMaterial({ color: 0x2a1d44, roughness: 0.9, metalness: 0.0 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+const ring = new THREE.Mesh(
+  new THREE.RingGeometry(2.0, 2.15, 64),
+  new THREE.MeshBasicMaterial({ color: 0xff6fae, transparent: true, opacity: 0.35, side: THREE.DoubleSide })
+);
+ring.rotation.x = -Math.PI / 2;
+ring.position.y = 0.01;
+scene.add(ring);
+
+// ---------- Materials ----------
+const skinMat = new THREE.MeshStandardMaterial({ color: 0xffe0c8, roughness: 0.6, metalness: 0.0 });
+const hairMat = new THREE.MeshStandardMaterial({ color: 0x5a3a2a, roughness: 0.5 });
+const dressMat = new THREE.MeshStandardMaterial({ color: 0xff7fb0, roughness: 0.5 });
+const dressMat2 = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
+const shoeMat = new THREE.MeshStandardMaterial({ color: 0x6a4cff, roughness: 0.4 });
+const blushMat = new THREE.MeshBasicMaterial({ color: 0xff8fae, transparent: true, opacity: 0 });
+const eyeWhiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
+const eyeMat = new THREE.MeshStandardMaterial({ color: 0x3a2a55, roughness: 0.2 });
+
+// ---------- Character (stylized chibi) ----------
+const girl = new THREE.Group();
+scene.add(girl);
+
+function part(mesh, name) {
+  mesh.castShadow = true;
+  mesh.userData.part = name;
+  return mesh;
+}
+
+// Legs
+const legGeo = new THREE.CapsuleGeometry(0.16, 0.55, 6, 12);
+const legL = part(new THREE.Mesh(legGeo, skinMat), 'leg');
+legL.position.set(-0.18, 0.45, 0);
+const legR = part(new THREE.Mesh(legGeo, skinMat), 'leg');
+legR.position.set(0.18, 0.45, 0);
+girl.add(legL, legR);
+
+// Shoes
+const shoeGeo = new THREE.SphereGeometry(0.17, 12, 10);
+const shoeL = part(new THREE.Mesh(shoeGeo, shoeMat), 'leg');
+shoeL.scale.set(1, 0.7, 1.4); shoeL.position.set(-0.18, 0.12, 0.05);
+const shoeR = part(new THREE.Mesh(shoeGeo, shoeMat), 'leg');
+shoeR.scale.set(1, 0.7, 1.4); shoeR.position.set(0.18, 0.12, 0.05);
+girl.add(shoeL, shoeR);
+
+// Torso / dress (cone-ish skirt + bodice)
+const skirt = part(new THREE.Mesh(new THREE.ConeGeometry(0.62, 0.8, 24, 1, true), dressMat), 'body');
+skirt.position.set(0, 1.0, 0);
+girl.add(skirt);
+const skirtHem = part(new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.05, 10, 28), dressMat2), 'body');
+skirtHem.rotation.x = Math.PI / 2; skirtHem.position.set(0, 0.62, 0);
+girl.add(skirtHem);
+
+const bodice = part(new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 0.4, 6, 14), dressMat), 'body');
+bodice.position.set(0, 1.45, 0);
+girl.add(bodice);
+
+// Neck
+const neck = part(new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.16, 12), skinMat), 'body');
+neck.position.set(0, 1.78, 0);
+girl.add(neck);
+
+// Arms (grouped for waving)
+const armGeo = new THREE.CapsuleGeometry(0.1, 0.5, 6, 12);
+const armLPivot = new THREE.Group(); armLPivot.position.set(-0.34, 1.62, 0);
+const armL = part(new THREE.Mesh(armGeo, skinMat), 'arm');
+armL.position.set(0, -0.3, 0); armLPivot.add(armL);
+const armRPivot = new THREE.Group(); armRPivot.position.set(0.34, 1.62, 0);
+const armR = part(new THREE.Mesh(armGeo, skinMat), 'arm');
+armR.position.set(0, -0.3, 0); armRPivot.add(armR);
+girl.add(armLPivot, armRPivot);
+// hands
+const handGeo = new THREE.SphereGeometry(0.12, 12, 10);
+const handL = part(new THREE.Mesh(handGeo, skinMat), 'arm'); handL.position.set(0, -0.62, 0); armLPivot.add(handL);
+const handR = part(new THREE.Mesh(handGeo, skinMat), 'arm'); handR.position.set(0, -0.62, 0); armRPivot.add(handR);
+
+// Head group (so it can nod / look)
+const head = new THREE.Group();
+head.position.set(0, 2.02, 0);
+girl.add(head);
+
+const skull = part(new THREE.Mesh(new THREE.SphereGeometry(0.34, 24, 20), skinMat), 'head');
+head.add(skull);
+
+// Hair (back) + bangs
+const hairBack = part(new THREE.Mesh(new THREE.SphereGeometry(0.37, 20, 18), hairMat), 'head');
+hairBack.scale.set(1, 1.05, 0.95); hairBack.position.set(0, 0.02, -0.04);
+head.add(hairBack);
+const bangs = part(new THREE.Mesh(new THREE.SphereGeometry(0.36, 20, 18, 0, Math.PI * 2, 0, Math.PI / 2.1), hairMat), 'head');
+bangs.position.set(0, 0.08, 0.0);
+head.add(bangs);
+// twin tails
+const tailGeo = new THREE.CapsuleGeometry(0.11, 0.4, 6, 12);
+const tailL = part(new THREE.Mesh(tailGeo, hairMat), 'head'); tailL.position.set(-0.34, 0.0, -0.05); tailL.rotation.z = 0.5;
+const tailR = part(new THREE.Mesh(tailGeo, hairMat), 'head'); tailR.position.set(0.34, 0.0, -0.05); tailR.rotation.z = -0.5;
+head.add(tailL, tailR);
+// hair ties
+const tieGeo = new THREE.TorusGeometry(0.06, 0.025, 8, 16);
+const tieL = new THREE.Mesh(tieGeo, dressMat); tieL.position.set(-0.28, 0.12, -0.02);
+const tieR = new THREE.Mesh(tieGeo, dressMat); tieR.position.set(0.28, 0.12, -0.02);
+head.add(tieL, tieR);
+
+// Eyes
+function makeEye(x) {
+  const g = new THREE.Group();
+  const white = new THREE.Mesh(new THREE.SphereGeometry(0.075, 14, 12), eyeWhiteMat);
+  white.scale.set(1, 1.25, 0.6);
+  const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 10), eyeMat);
+  pupil.position.set(0, -0.01, 0.05);
+  const shine = new THREE.Mesh(new THREE.SphereGeometry(0.016, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+  shine.position.set(0.015, 0.02, 0.085);
+  g.add(white, pupil, shine);
+  g.position.set(x, 0.0, 0.30);
+  return g;
+}
+const eyeL = makeEye(-0.13);
+const eyeR = makeEye(0.13);
+head.add(eyeL, eyeR);
+
+// Eyelids (for blinking) — thin skin-colored caps that scale to cover eyes
+function makeLid(x) {
+  const lid = new THREE.Mesh(new THREE.SphereGeometry(0.082, 14, 8, 0, Math.PI*2, 0, Math.PI/2), skinMat);
+  lid.scale.set(1, 0.05, 0.62);
+  lid.position.set(x, 0.02, 0.30);
+  return lid;
+}
+const lidL = makeLid(-0.13);
+const lidR = makeLid(0.13);
+head.add(lidL, lidR);
+
+// Smile (a small torus arc)
+const mouth = new THREE.Mesh(
+  new THREE.TorusGeometry(0.05, 0.014, 8, 16, Math.PI),
+  new THREE.MeshStandardMaterial({ color: 0xc24a6a })
+);
+mouth.rotation.z = Math.PI;
+mouth.position.set(0, -0.13, 0.31);
+head.add(mouth);
+
+// Blush
+const blushGeo = new THREE.CircleGeometry(0.05, 16);
+const blushL = new THREE.Mesh(blushGeo, blushMat); blushL.position.set(-0.17, -0.05, 0.30); blushL.rotation.y = -0.3;
+const blushR = new THREE.Mesh(blushGeo, blushMat.clone()); blushR.position.set(0.17, -0.05, 0.30); blushR.rotation.y = 0.3;
+head.add(blushL, blushR);
+
+// ---------- Particles (hearts / sparkles) ----------
+const fxGroup = new THREE.Group();
+scene.add(fxGroup);
+function spawnHearts(origin, color = 0xff6fae, count = 8) {
+  for (let i = 0; i < count; i++) {
+    const m = new THREE.Mesh(
+      new THREE.SphereGeometry(0.06, 8, 8),
+      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1 })
+    );
+    m.position.copy(origin);
+    m.userData.vel = new THREE.Vector3((Math.random()-0.5)*1.2, 1.5+Math.random()*1.5, (Math.random()-0.5)*1.2);
+    m.userData.life = 1.0;
+    m.scale.setScalar(0.5 + Math.random());
+    fxGroup.add(m);
+  }
+}
+
+// ---------- Interaction state ----------
+const speech = document.getElementById('speech');
+let speechTimer = null;
+function say(text, dur = 1800) {
+  speech.textContent = text;
+  speech.classList.add('show');
+  clearTimeout(speechTimer);
+  speechTimer = setTimeout(() => speech.classList.remove('show'), dur);
+}
+
+let affection = 0;
+const meterFill = document.getElementById('meterFill');
+const meterPct = document.getElementById('meterPct');
+function addAffection(n) {
+  affection = Math.min(100, affection + n);
+  meterFill.style.width = affection + '%';
+  meterPct.textContent = Math.round(affection) + '%';
+  if (affection >= 100 && !girl.userData.maxed) {
+    girl.userData.maxed = true;
+    say('だいすき！💖 ずっといっしょだよ！', 3000);
+    spawnHearts(new THREE.Vector3(0, 2.0, 0), 0xff3f8f, 24);
+  }
+}
+
+// reactions
+const reactions = {
+  head: ['えへへ、なでてくれるの？', 'きもちいい〜♪', 'ふふっ、くすぐったいよ'],
+  body: ['わわっ、びっくりした！', 'こちょこちょ？', 'なになに？'],
+  arm:  ['手をつなぐ？ いいよ♪', 'いっしょにいこ！', 'ぎゅー♪'],
+  leg:  ['あはは、くすぐったい！', 'おっとっと…', 'はやく走れるよ！'],
+};
+let reactTimer = 0; // for blush hold
+let waveTimer = 0, danceTimer = 0, nodTimer = 0;
+
+function react(partName, point) {
+  const lines = reactions[partName] || reactions.body;
+  say(lines[Math.floor(Math.random() * lines.length)]);
+  addAffection(4);
+  spawnHearts(point.clone().add(new THREE.Vector3(0, 0.2, 0)));
+  // blush up
+  blushL.material.opacity = 0.8; blushR.material.opacity = 0.8;
+  reactTimer = 0.6;
+  nodTimer = 0.5;
+  // squash & stretch pulse
+  girl.userData.pulse = 1;
+  // hide hint after first touch
+  document.getElementById('hint').style.opacity = 0;
+}
+
+// ---------- Camera controls ----------
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 1.5, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 2.5;
+controls.maxDistance = 9;
+controls.maxPolarAngle = Math.PI * 0.92;
+controls.minPolarAngle = Math.PI * 0.08;
+controls.enablePan = false;
+controls.rotateSpeed = 0.9;
+controls.update();
+
+// ---------- Raycasting for taps ----------
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+const clickable = [];
+girl.traverse(o => { if (o.isMesh && o.userData.part) clickable.push(o); });
+
+// Tap detection that distinguishes from drag
+let downPos = null, downTime = 0, moved = false;
+function getXY(e) {
+  const t = e.changedTouches ? e.changedTouches[0] : e;
+  return { x: t.clientX, y: t.clientY };
+}
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  const p = getXY(e); downPos = p; downTime = performance.now(); moved = false;
+});
+renderer.domElement.addEventListener('pointermove', (e) => {
+  if (!downPos) return;
+  const p = getXY(e);
+  if (Math.hypot(p.x - downPos.x, p.y - downPos.y) > 10) moved = true;
+});
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!downPos) return;
+  const dt = performance.now() - downTime;
+  const wasTap = !moved && dt < 400;
+  const p = getXY(e);
+  downPos = null;
+  if (!wasTap) return;
+  pointer.x = (p.x / innerWidth) * 2 - 1;
+  pointer.y = -(p.y / innerHeight) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObjects(clickable, false);
+  if (hits.length) react(hits[0].object.userData.part, hits[0].point);
+});
+
+// ---------- Buttons ----------
+document.getElementById('btnWave').addEventListener('click', () => {
+  waveTimer = 2.0;
+  say('やっほー！👋', 1500);
+  addAffection(3);
+});
+document.getElementById('btnDance').addEventListener('click', () => {
+  danceTimer = 4.0;
+  say('みててね♪ ダンスするよ！💃', 2000);
+  addAffection(5);
+  spawnHearts(new THREE.Vector3(0, 1.6, 0), 0x8a7cff, 10);
+});
+document.getElementById('btnReset').addEventListener('click', () => {
+  camera.position.copy(DEFAULT_CAM);
+  controls.target.set(0, 1.5, 0);
+  controls.update();
+  say('こっちだよ〜', 1200);
+});
+
+// ---------- Resize ----------
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ---------- Animate ----------
+const clock = new THREE.Clock();
+let blinkCooldown = 2 + Math.random() * 3;
+let blink = 0;
+const restScale = new THREE.Vector3(1, 1, 1);
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.elapsedTime;
+
+  // Idle breathing
+  const breathe = Math.sin(t * 1.6) * 0.02;
+  bodice.position.y = 1.45 + breathe;
+  head.position.y = 2.02 + breathe;
+  head.rotation.z = Math.sin(t * 0.8) * 0.03;
+
+  // gentle idle look-around
+  if (nodTimer <= 0 && waveTimer <= 0 && danceTimer <= 0) {
+    head.rotation.y = Math.sin(t * 0.5) * 0.18;
+    head.rotation.x = Math.sin(t * 0.7) * 0.04;
+  }
+
+  // Nod when touched
+  if (nodTimer > 0) {
+    nodTimer -= dt;
+    head.rotation.x = Math.sin((0.5 - nodTimer) * 18) * 0.18;
+  }
+
+  // Arms idle sway
+  if (waveTimer <= 0 && danceTimer <= 0) {
+    armLPivot.rotation.z = 0.18 + Math.sin(t * 1.6) * 0.04;
+    armRPivot.rotation.z = -0.18 - Math.sin(t * 1.6) * 0.04;
+    armLPivot.rotation.x = 0; armRPivot.rotation.x = 0;
+  }
+
+  // Wave animation (right arm up & waving)
+  if (waveTimer > 0) {
+    waveTimer -= dt;
+    armRPivot.rotation.z = -2.3;
+    armRPivot.rotation.x = Math.sin((2.0 - waveTimer) * 14) * 0.5 - 0.2;
+  }
+
+  // Dance animation
+  if (danceTimer > 0) {
+    danceTimer -= dt;
+    const d = t * 6;
+    girl.rotation.y = Math.sin(d) * 0.4;
+    girl.position.y = Math.abs(Math.sin(d)) * 0.12;
+    armLPivot.rotation.z = 0.6 + Math.sin(d) * 0.8;
+    armRPivot.rotation.z = -0.6 - Math.sin(d) * 0.8;
+    armLPivot.rotation.x = Math.sin(d) * 0.4;
+    armRPivot.rotation.x = -Math.sin(d) * 0.4;
+    head.rotation.y = Math.sin(d * 0.5) * 0.3;
+  } else {
+    girl.rotation.y += (0 - girl.rotation.y) * 0.1;
+    girl.position.y += (0 - girl.position.y) * 0.1;
+  }
+
+  // Squash & stretch pulse on tap
+  if (girl.userData.pulse > 0) {
+    girl.userData.pulse = Math.max(0, girl.userData.pulse - dt * 3);
+    const s = 1 + Math.sin(girl.userData.pulse * Math.PI) * 0.05;
+    girl.scale.set(1 / Math.sqrt(s), s, 1 / Math.sqrt(s));
+  } else {
+    girl.scale.lerp(restScale, 0.2);
+  }
+
+  // Blink
+  blinkCooldown -= dt;
+  if (blinkCooldown <= 0 && blink === 0) blink = 0.001;
+  if (blink > 0) {
+    blink += dt * 6;
+    const closed = Math.sin(Math.min(blink, 1) * Math.PI);
+    const sy = 0.05 + closed * 1.3;
+    lidL.scale.y = sy; lidR.scale.y = sy;
+    if (blink >= 1) { blink = 0; blinkCooldown = 2 + Math.random() * 3; lidL.scale.y = 0.05; lidR.scale.y = 0.05; }
+  }
+
+  // Blush fade
+  if (reactTimer > 0) reactTimer -= dt;
+  else {
+    blushL.material.opacity += (0 - blushL.material.opacity) * 0.05;
+    blushR.material.opacity += (0 - blushR.material.opacity) * 0.05;
+  }
+
+  // Particles
+  fxGroup.children.slice().forEach(m => {
+    m.userData.life -= dt;
+    m.userData.vel.y -= dt * 1.5;
+    m.position.addScaledVector(m.userData.vel, dt);
+    m.material.opacity = Math.max(0, m.userData.life);
+    m.rotation.z += dt * 3;
+    if (m.userData.life <= 0) { fxGroup.remove(m); m.geometry.dispose(); m.material.dispose(); }
+  });
+
+  // ring pulse
+  ring.material.opacity = 0.25 + Math.sin(t * 2) * 0.12;
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+// Hide loader
+setTimeout(() => document.getElementById('loader').classList.add('hide'), 500);
+
+// Greeting on start
+setTimeout(() => { say('こんにちは！あそんでくれる？😊', 2500); waveTimer = 1.6; }, 900);
+</script>
+</body>
+</html>
