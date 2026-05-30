@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#150a26" />
+<title>weekend-dot-visualizer — apps</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Segoe UI", sans-serif;
+    background: radial-gradient(circle at 50% 30%, #2a1a4a, #120820);
+    color: #fff;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 48px 20px 60px;
+  }
+  h1 { font-size: clamp(22px, 6vw, 32px); font-weight: 800; }
+  p.sub { opacity: .7; margin-top: 8px; font-size: 14px; text-align: center; }
+  .grid {
+    margin-top: 32px; width: 100%; max-width: 520px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  a.card {
+    display: flex; align-items: center; gap: 16px;
+    text-decoration: none; color: #fff;
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 18px; padding: 18px 20px;
+    transition: transform .12s ease, background .2s ease;
+  }
+  a.card:active { transform: scale(.98); }
+  a.card:hover { background: rgba(255,255,255,.12); }
+  .emoji { font-size: 34px; line-height: 1; }
+  .meta h2 { font-size: 17px; font-weight: 700; }
+  .meta span { font-size: 13px; opacity: .7; }
+  footer { margin-top: 40px; font-size: 12px; opacity: .5; }
+</style>
+</head>
+<body>
+  <h1>weekend-dot-visualizer</h1>
+  <p class="sub">ブラウザで動く小さなアプリ集</p>
+  <div class="grid">
+    <a class="card" href="./3d-girl-touch/">
+      <span class="emoji">💖</span>
+      <span class="meta"><h2>ふれあい3Dガール</h2><span>3Dキャラとふれあう・モバイル最適化</span></span>
+    </a>
+    <a class="card" href="./knight-dragon/">
+      <span class="emoji">⚔️</span>
+      <span class="meta"><h2>騎士ドラ風 戦闘プロトタイプ</h2><span>バトル / 装備 / ガチャ</span></span>
+    </a>
+  </div>
+  <footer>GitHub Pages</footer>
+</body>
+</html>
