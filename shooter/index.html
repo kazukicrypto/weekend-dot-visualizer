@@ -40,9 +40,9 @@
   .hud-l .sc b { font-size: 20px; font-weight: 800; margin-left: 3px; }
   .hud-r { text-align: right; font-size: 12px; opacity: .95; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
   #lives { font-size: 17px; letter-spacing: 1px; }
-  #muteBtn { pointer-events: auto; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2);
+  #muteBtn, #pauseBtn { pointer-events: auto; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2);
              color: #fff; width: 34px; height: 34px; border-radius: 10px; font-size: 16px; cursor: pointer; }
-  #muteBtn:active { transform: scale(.92); }
+  #muteBtn:active, #pauseBtn:active { transform: scale(.92); }
 
   /* Overlays */
   .overlay {
@@ -125,7 +125,10 @@
     <div class="hud-r">
       <div>WAVE <span id="wave">1</span></div>
       <div id="lives">❤️❤️❤️</div>
-      <button id="muteBtn">🔊</button>
+      <div style="display:flex; gap:6px;">
+        <button id="pauseBtn">⏸</button>
+        <button id="muteBtn">🔊</button>
+      </div>
     </div>
   </div>
 
@@ -153,6 +156,14 @@
     <div class="lu-title">⭐ LEVEL UP!</div>
     <div class="lu-sub">スキルを1つ選んで強化</div>
     <div class="cards" id="cards"></div>
+  </div>
+
+  <!-- Pause -->
+  <div class="overlay hidden" id="pauseScreen">
+    <div class="tag-badge">PAUSED</div>
+    <div class="title" style="font-size:clamp(26px,8vw,40px)">一時停止</div>
+    <button class="btn" id="resumeBtn">▶ 再開</button>
+    <button class="dif" id="quitBtn" style="max-width:220px; pointer-events:auto;">やめてタイトルへ</button>
   </div>
 
   <!-- Game Over -->
@@ -250,7 +261,7 @@
   })();
 
   // ===================== STATE =====================
-  const STATE = { START: 0, PLAY: 1, LEVELUP: 2, OVER: 3 };
+  const STATE = { START: 0, PLAY: 1, LEVELUP: 2, OVER: 3, PAUSE: 4 };
   let state = STATE.START;
   window.__playing = false;
 
@@ -263,8 +274,8 @@
   ];
   let diffIdx = 1, diff = DIFFS[1];
 
-  let player, stats, bullets = [], enemies = [], ebullets = [], particles = [], stars = [], powerups = [], booms = [], boss = null;
-  let score, hp, maxHp, wave, tick, spawnTimer, waveTimer, invuln, fireCD, powerLevel, shake;
+  let player, stats, bullets = [], enemies = [], ebullets = [], particles = [], stars = [], drops = [], booms = [], boss = null;
+  let score, hp, maxHp, wave, tick, spawnTimer, waveTimer, invuln, fireCD, shake;
   let xp, xpNext, level, pendingLevels, enemyId, bossCount, floatMsg;
 
   function makeStars() {
@@ -279,11 +290,11 @@
       damage: 1, fireInterval: 12, projectiles: 1, spreadDeg: 7,
       side: false, rear: false, diagonal: false,
       pierce: 0, bounce: 0, critChance: 0.05, critMult: 2,
-      bulletR: 4, bulletSpeed: 7.4, moveLerp: 0.34, explosive: 0
+      bulletR: 4, bulletSpeed: 7.4, moveLerp: 0.34, explosive: 0, magnet: 46
     };
-    bullets = []; enemies = []; ebullets = []; particles = []; powerups = []; booms = []; boss = null;
+    bullets = []; enemies = []; ebullets = []; particles = []; drops = []; booms = []; boss = null;
     score = 0; maxHp = diff.lives; hp = maxHp; wave = 1; tick = 0;
-    spawnTimer = 40; waveTimer = 0; invuln = 70; fireCD = 0; powerLevel = 1; shake = 0;
+    spawnTimer = 40; waveTimer = 0; invuln = 70; fireCD = 0; shake = 0;
     xp = 0; level = 1; xpNext = 12; pendingLevels = 0; enemyId = 1; bossCount = 0; floatMsg = null;
     makeStars();
     updateHUD();
@@ -330,7 +341,8 @@
     const dx = ax - bx, dy = ay - by, rr = ar + br;
     return dx * dx + dy * dy < rr * rr;
   }
-  function dropPower(x, y) { powerups.push({ x, y, r: 11, vy: 1.6 }); }
+  function dropGem(x, y) { drops.push({ kind: 'gem', x, y, r: 9, vy: 1.4 }); }
+  function dropHeart(x, y) { drops.push({ kind: 'heart', x, y, r: 11, vy: 1.2 }); }
 
   function spawnBullet(x, y, ang) {
     const crit = Math.random() < stats.critChance;
@@ -407,7 +419,8 @@
     score += e.score;
     spawnParticles(e.x, e.y, e.color, 16, 4.5);
     Audio.hit();
-    if (Math.random() < 0.075) dropPower(e.x, e.y);
+    if (Math.random() < 0.14) dropGem(e.x, e.y);
+    else if (hp < maxHp && Math.random() < 0.035) dropHeart(e.x, e.y);
     if (stats.explosive > 0) explode(e.x, e.y, stats.explosive, stats.damage * 0.8);
     addXP(e.xp);
   }
@@ -499,14 +512,21 @@
       if (hit(b.x, b.y, b.r, player.x, player.y, player.r - 4)) { b.dead = true; playerHurt(); }
     }
 
-    // powerups
-    for (const p of powerups) {
-      p.y += p.vy;
+    // drops (gems / hearts) — magnet pull toward player
+    for (const p of drops) {
+      const dx = player.x - p.x, dy = player.y - p.y, dist = Math.hypot(dx, dy);
+      if (dist < stats.magnet) { p.x += dx / dist * 4.2; p.y += dy / dist * 4.2; }
+      else p.y += p.vy;
       if (p.y > H + 20) { p.dead = true; continue; }
       if (hit(p.x, p.y, p.r, player.x, player.y, player.r + 4)) {
-        p.dead = true; powerLevel = Math.min(9, powerLevel + 1); score += 25;
-        spawnParticles(p.x, p.y, '#9bffb0', 16, 3.5); Audio.power();
-        stats.damage += 0.2; // small permanent boost from pickups
+        p.dead = true;
+        if (p.kind === 'heart') {
+          hp = Math.min(maxHp, hp + 1);
+          spawnParticles(p.x, p.y, '#ff8fa0', 16, 3.5); Audio.power();
+        } else {
+          score += 15; addXP(3);
+          spawnParticles(p.x, p.y, '#9be9ff', 12, 3); Audio.power();
+        }
         updateHUD();
       }
     }
@@ -521,7 +541,7 @@
     bullets = bullets.filter(b => !b.dead);
     enemies = enemies.filter(e => !e.dead && !e.gone);
     ebullets = ebullets.filter(b => !b.dead);
-    powerups = powerups.filter(p => !p.dead);
+    drops = drops.filter(p => !p.dead);
     booms = booms.filter(b => !b.dead);
     particles = particles.filter(p => !p.dead);
   }
@@ -602,7 +622,7 @@
 
   function playerHurt() {
     if (invuln > 0) return;
-    hp--; invuln = 95; shake = 15; powerLevel = Math.max(1, powerLevel - 1);
+    hp--; invuln = 95; shake = 15;
     spawnParticles(player.x, player.y, '#ff6b6b', 30, 5);
     Audio.hurt(); updateHUD();
     if (hp <= 0) gameOver();
@@ -624,7 +644,7 @@
     { id: 'explo', ic: '🧨', name: '爆発弾', desc: '撃破時に爆発（範囲ダメージ）', rare: 1, apply: () => stats.explosive += 26, ok: () => stats.explosive < 90 },
     { id: 'hpup', ic: '❤️', name: '最大HPアップ', desc: 'ハート +1・全回復', rare: 1, apply: () => { maxHp += 1; hp = maxHp; }, ok: () => maxHp < 8 },
     { id: 'heal', ic: '🩹', name: '回復', desc: 'ハートを2回復', apply: () => hp = Math.min(maxHp, hp + 2), ok: () => hp < maxHp },
-    { id: 'speed', ic: '👟', name: '移動速度アップ', desc: '機体の追従が速くなる', apply: () => stats.moveLerp = Math.min(0.62, stats.moveLerp + 0.05), ok: () => stats.moveLerp < 0.6 }
+    { id: 'magnet', ic: '🧲', name: 'マグネット', desc: 'アイテムを引き寄せる範囲UP', apply: () => stats.magnet += 40, ok: () => stats.magnet < 220 }
   ];
   function pickSkills(n) {
     const pool = SKILLS.filter(s => s.ok());
@@ -702,39 +722,51 @@
     ctx.globalAlpha = 1;
 
     if (state !== STATE.START) {
-      for (const p of powerups) {
-        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(tick * 0.06);
-        ctx.fillStyle = '#9bffb0'; ctx.shadowColor = '#4dffa0'; ctx.shadowBlur = 14;
-        ctx.beginPath();
-        for (let k = 0; k < 4; k++) {
-          const a = k * Math.PI / 2;
-          ctx.lineTo(Math.cos(a) * p.r, Math.sin(a) * p.r);
-          ctx.lineTo(Math.cos(a + 0.785) * p.r * 0.45, Math.sin(a + 0.785) * p.r * 0.45);
+      for (const p of drops) {
+        ctx.save(); ctx.translate(p.x, p.y);
+        if (p.kind === 'heart') {
+          ctx.shadowColor = '#ff5c8a'; ctx.shadowBlur = 12;
+          ctx.font = '18px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText('❤️', 0, 1);
+        } else {
+          ctx.rotate(tick * 0.05);
+          ctx.fillStyle = '#8fe6ff'; ctx.shadowColor = '#4db8ff'; ctx.shadowBlur = 12;
+          ctx.beginPath();
+          for (let k = 0; k < 4; k++) {
+            const a = k * Math.PI / 2;
+            ctx.lineTo(Math.cos(a) * p.r, Math.sin(a) * p.r);
+            ctx.lineTo(Math.cos(a + 0.785) * p.r * 0.45, Math.sin(a + 0.785) * p.r * 0.45);
+          }
+          ctx.closePath(); ctx.fill();
         }
-        ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0;
-        ctx.fillStyle = '#05060f'; ctx.font = 'bold 11px sans-serif';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('P', 0, 1);
         ctx.restore();
       }
+      ctx.shadowBlur = 0;
 
       for (const e of enemies) drawEnemy(e);
       if (boss) drawBoss(boss);
 
-      // player bullets
+      // player bullets — kept subtle so enemy fire stays readable
+      ctx.globalAlpha = 0.8;
       for (const b of bullets) {
-        ctx.fillStyle = b.crit ? '#fff2a0' : '#aef4ff';
-        ctx.shadowColor = b.crit ? '#ffd76a' : '#7fdcff'; ctx.shadowBlur = 8;
-        ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 6.28); ctx.fill();
+        ctx.fillStyle = b.crit ? '#fff2a0' : '#9fe4ff';
+        ctx.shadowColor = b.crit ? '#ffd76a' : '#6fc8ff'; ctx.shadowBlur = 5;
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.r * 0.9, 0, 6.28); ctx.fill();
       }
-      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1; ctx.shadowBlur = 0;
 
+      // enemy bullets — bright with white core so they pop over player fire
       for (const b of ebullets) {
-        ctx.fillStyle = '#ff8ab0'; ctx.shadowColor = '#ff5c8a'; ctx.shadowBlur = 10;
-        ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 6.28); ctx.fill();
+        ctx.shadowColor = '#ff2d6b'; ctx.shadowBlur = 12;
+        ctx.fillStyle = '#ff2d6b';
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.r + 1.5, 0, 6.28); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.r * 0.5, 0, 6.28); ctx.fill();
       }
       ctx.shadowBlur = 0;
 
-      if (state === STATE.PLAY || state === STATE.LEVELUP) drawPlayer();
+      if (state === STATE.PLAY || state === STATE.LEVELUP || state === STATE.PAUSE) drawPlayer();
     }
 
     if (floatMsg && floatMsg.t > 0) {
@@ -841,11 +873,11 @@
   function showBest() { document.getElementById('startBest').textContent = best > 0 ? 'ベストスコア: ' + best : ''; }
   showBest();
 
-  // difficulty buttons
-  document.querySelectorAll('.dif').forEach(btn => {
+  // difficulty buttons (scoped to #difs so other .dif-styled buttons are unaffected)
+  document.querySelectorAll('#difs .dif').forEach(btn => {
     btn.addEventListener('click', () => {
       diffIdx = parseInt(btn.dataset.d, 10);
-      document.querySelectorAll('.dif').forEach(x => x.classList.remove('sel'));
+      document.querySelectorAll('#difs .dif').forEach(x => x.classList.remove('sel'));
       btn.classList.add('sel');
     });
   });
@@ -877,6 +909,32 @@
   document.getElementById('muteBtn').addEventListener('click', (e) => { e.stopPropagation(); Audio.toggleMute(); updateMuteBtn(); });
   document.getElementById('startBtn').addEventListener('click', startGame);
   document.getElementById('retryBtn').addEventListener('click', startGame);
+
+  // pause / resume / quit
+  const pauseScreen = document.getElementById('pauseScreen');
+  function pauseGame() {
+    if (state !== STATE.PLAY) return;
+    state = STATE.PAUSE; window.__playing = false; dragging = false;
+    Audio.select();
+    hud.style.display = 'none';
+    pauseScreen.classList.remove('hidden');
+  }
+  function resumeGame() {
+    if (state !== STATE.PAUSE) return;
+    state = STATE.PLAY; window.__playing = true;
+    pauseScreen.classList.add('hidden');
+    hud.style.display = 'flex';
+  }
+  function quitToTitle() {
+    state = STATE.START; window.__playing = false;
+    pauseScreen.classList.add('hidden');
+    hud.style.display = 'none';
+    startScreen.classList.remove('hidden');
+    showBest();
+  }
+  document.getElementById('pauseBtn').addEventListener('click', (e) => { e.stopPropagation(); pauseGame(); });
+  document.getElementById('resumeBtn').addEventListener('click', resumeGame);
+  document.getElementById('quitBtn').addEventListener('click', quitToTitle);
 })();
 </script>
 </body>
