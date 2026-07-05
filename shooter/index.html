@@ -291,21 +291,21 @@
   ];
   // Weapons (breath). rarity, fire profile.
   const WEAPONS = {
-    normal:  { name: 'ノーマルブレス', rarity: 0, icon: '🔥', desc: '標準の炎弾', proj: 1, interval: 12, spread: 7, bulletR: 4, dmg: 1 },
-    rapid:   { name: 'ラピッドブレス', rarity: 0, icon: '💨', desc: '速射・小炎弾', proj: 1, interval: 8, spread: 6, bulletR: 3.4, dmg: 0.8 },
-    twin:    { name: 'ツインブレス', rarity: 1, icon: '🔥', desc: '2連の炎弾', proj: 2, interval: 12, spread: 9, bulletR: 4, dmg: 1 },
-    spread:  { name: 'スプレッドブレス', rarity: 2, icon: '🌋', desc: '3方向へ拡散', proj: 3, interval: 13, spread: 13, bulletR: 4, dmg: 1 },
-    inferno: { name: 'インフェルノ', rarity: 3, icon: '☄️', desc: '高速・特大の業火', proj: 1, interval: 8, spread: 6, bulletR: 7, dmg: 1.7 }
+    normal:  { name: 'ノーマルブレス', rarity: 0, icon: '🔥', desc: '標準の炎弾', proj: 1, interval: 16, spread: 7, bulletR: 3.4, dmg: 0.6 },
+    rapid:   { name: 'ラピッドブレス', rarity: 0, icon: '💨', desc: '速射・小炎弾', proj: 1, interval: 11, spread: 6, bulletR: 3, dmg: 0.45 },
+    twin:    { name: 'ツインブレス', rarity: 1, icon: '🔥', desc: '2連の炎弾', proj: 2, interval: 16, spread: 9, bulletR: 3.4, dmg: 0.6 },
+    spread:  { name: 'スプレッドブレス', rarity: 2, icon: '🌋', desc: '3方向へ拡散', proj: 3, interval: 17, spread: 13, bulletR: 3.4, dmg: 0.6 },
+    inferno: { name: 'インフェルノ', rarity: 3, icon: '☄️', desc: '高速・特大の業火', proj: 1, interval: 10, spread: 6, bulletR: 6, dmg: 1.1 }
   };
   // Companion mini-dragons.
   const DRAGONS = {
     none:    { name: 'なし', rarity: 0, icon: '—', desc: 'お供なし' },
-    fire:    { name: 'チビファイア', rarity: 0, icon: '🐲', color: '#ff7a3d', desc: 'ときどき炎を吐く', interval: 32, count: 1, dmg: 0.6 },
-    ember:   { name: 'チビエンバー', rarity: 0, icon: '🦎', color: '#ff5a2d', desc: '小さな火の玉', interval: 30, count: 1, dmg: 0.7 },
-    ice:     { name: 'チビアイス', rarity: 1, icon: '🐉', color: '#5bc8ff', desc: '速い連射', interval: 24, count: 1, dmg: 0.7 },
-    shadow:  { name: 'チビシャドウ', rarity: 1, icon: '🦇', color: '#b06bff', desc: '闇の弾', interval: 22, count: 1, dmg: 0.8 },
-    thunder: { name: 'チビサンダー', rarity: 2, icon: '🐲', color: '#ffd93d', desc: '2連射', interval: 26, count: 2, dmg: 0.7 },
-    gold:    { name: 'ゴールドドラゴン', rarity: 3, icon: '🐉', color: '#ffcf5a', desc: '強力な連射', interval: 16, count: 2, dmg: 1.0 }
+    fire:    { name: 'チビファイア', rarity: 0, icon: '🐲', color: '#ff7a3d', desc: 'ときどき炎を吐く', interval: 48, count: 1, dmg: 0.35 },
+    ember:   { name: 'チビエンバー', rarity: 0, icon: '🦎', color: '#ff5a2d', desc: '小さな火の玉', interval: 44, count: 1, dmg: 0.4 },
+    ice:     { name: 'チビアイス', rarity: 1, icon: '🐉', color: '#5bc8ff', desc: '速い連射', interval: 36, count: 1, dmg: 0.45 },
+    shadow:  { name: 'チビシャドウ', rarity: 1, icon: '🦇', color: '#b06bff', desc: '闇の弾', interval: 34, count: 1, dmg: 0.5 },
+    thunder: { name: 'チビサンダー', rarity: 2, icon: '🐲', color: '#ffd93d', desc: '2連射', interval: 40, count: 2, dmg: 0.45 },
+    gold:    { name: 'ゴールドドラゴン', rarity: 3, icon: '🐉', color: '#ffcf5a', desc: '強力な連射', interval: 26, count: 2, dmg: 0.62 }
   };
   const GACHA = [
     { t: 'w', id: 'rapid' }, { t: 'd', id: 'fire' }, { t: 'd', id: 'ember' },
@@ -361,8 +361,8 @@
     const w = WEAPONS[meta.equipWeapon] || WEAPONS.normal;
     stats = {
       damage: w.dmg, fireInterval: w.interval, projectiles: w.proj, spreadDeg: w.spread,
-      side: false, rear: false, diagonal: false, pierce: 0, bounce: 0, critChance: 0.05, critMult: 2,
-      bulletR: w.bulletR, bulletSpeed: 7.6, moveLerp: 0.34, explosive: 0, magnet: 46
+      side: false, rear: false, diagonal: false, pierce: 0, bounce: 0, critChance: 0.03, critMult: 2,
+      bulletR: w.bulletR, bulletSpeed: 7.2, moveLerp: 0.34, explosive: 0, magnet: 46
     };
     mates = [];
     const d = DRAGONS[meta.equipDragon];
@@ -370,7 +370,7 @@
     bullets = []; enemies = []; ebullets = []; particles = []; drops = []; booms = []; boss = null;
     score = 0; maxHp = 3; hp = 3; wave = 1; tick = 0;
     spawnTimer = 36; waveTimer = 0; invuln = 70; fireCD = 0; shake = 0;
-    xp = 0; level = 1; xpNext = 12; pendingLevels = 0; enemyId = 1; bossCount = 0; floatMsg = null;
+    xp = 0; level = 1; xpNext = 16; pendingLevels = 0; enemyId = 1; bossCount = 0; floatMsg = null;
     makeStars(); updateHUD();
   }
 
@@ -455,7 +455,7 @@
   // ===================== XP / LEVEL =====================
   function addXP(n) {
     xp += n;
-    while (xp >= xpNext) { xp -= xpNext; level++; xpNext = Math.round(12 + level * 7); pendingLevels++; }
+    while (xp >= xpNext) { xp -= xpNext; level++; xpNext = Math.round(16 + level * 9); pendingLevels++; }
     if (pendingLevels > 0 && state === STATE.PLAY) openLevelUp();
     updateHUD();
   }
