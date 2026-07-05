@@ -296,11 +296,11 @@
   ];
   // Weapons (breath). rarity, fire profile.
   const WEAPONS = {
-    normal:  { name: 'ノーマルブレス', rarity: 0, icon: '🔥', desc: '標準の炎弾', proj: 1, interval: 16, spread: 7, bulletR: 3.4, dmg: 0.6 },
-    rapid:   { name: 'ラピッドブレス', rarity: 0, icon: '💨', desc: '速射・小炎弾', proj: 1, interval: 11, spread: 6, bulletR: 3, dmg: 0.45 },
-    twin:    { name: 'ツインブレス', rarity: 1, icon: '🔥', desc: '2連の炎弾', proj: 2, interval: 16, spread: 9, bulletR: 3.4, dmg: 0.6 },
-    spread:  { name: 'スプレッドブレス', rarity: 2, icon: '🌋', desc: '3方向へ拡散', proj: 3, interval: 17, spread: 13, bulletR: 3.4, dmg: 0.6 },
-    inferno: { name: 'インフェルノ', rarity: 3, icon: '☄️', desc: '高速・特大の業火', proj: 1, interval: 10, spread: 6, bulletR: 6, dmg: 1.1 }
+    normal:  { name: 'ノーマルブレス', rarity: 0, icon: '🔥', desc: '標準の炎弾', proj: 1, interval: 19, spread: 7, bulletR: 3.3, dmg: 0.5 },
+    rapid:   { name: 'ラピッドブレス', rarity: 0, icon: '💨', desc: '速射・小炎弾', proj: 1, interval: 13, spread: 6, bulletR: 2.9, dmg: 0.36 },
+    twin:    { name: 'ツインブレス', rarity: 1, icon: '🔥', desc: '2連の炎弾', proj: 2, interval: 19, spread: 9, bulletR: 3.3, dmg: 0.5 },
+    spread:  { name: 'スプレッドブレス', rarity: 2, icon: '🌋', desc: '3方向へ拡散', proj: 3, interval: 20, spread: 13, bulletR: 3.3, dmg: 0.5 },
+    inferno: { name: 'インフェルノ', rarity: 3, icon: '☄️', desc: '高速・特大の業火', proj: 1, interval: 12, spread: 6, bulletR: 5.8, dmg: 0.9 }
   };
   // Companion mini-dragons.
   const DRAGONS = {
@@ -367,7 +367,7 @@
     stats = {
       damage: w.dmg, fireInterval: w.interval, projectiles: w.proj, spreadDeg: w.spread,
       side: false, rear: false, diagonal: false, pierce: 0, bounce: 0, critChance: 0.03, critMult: 2,
-      bulletR: w.bulletR, bulletSpeed: 7.2, moveLerp: 0.34, explosive: 0, magnet: 46
+      bulletR: w.bulletR, bulletSpeed: 7.0, moveLerp: 0.30, explosive: 0, magnet: 46
     };
     mates = [];
     const d = DRAGONS[meta.equipDragon];
@@ -375,7 +375,7 @@
     bullets = []; enemies = []; ebullets = []; particles = []; drops = []; booms = []; boss = null;
     score = 0; maxHp = 3; hp = 3; wave = 1; tick = 0;
     spawnTimer = 36; waveTimer = 0; invuln = 70; fireCD = 0; shake = 0;
-    xp = 0; level = 1; xpNext = 16; pendingLevels = 0; enemyId = 1; bossCount = 0; floatMsg = null;
+    xp = 0; level = 1; xpNext = 20; pendingLevels = 0; enemyId = 1; bossCount = 0; floatMsg = null;
     makeStars(); updateHUD();
   }
 
@@ -460,7 +460,7 @@
   // ===================== XP / LEVEL =====================
   function addXP(n) {
     xp += n;
-    while (xp >= xpNext) { xp -= xpNext; level++; xpNext = Math.round(16 + level * 9); pendingLevels++; }
+    while (xp >= xpNext) { xp -= xpNext; level++; xpNext = Math.round(20 + level * 11); pendingLevels++; }
     if (pendingLevels > 0 && state === STATE.PLAY) openLevelUp();
     updateHUD();
   }
@@ -699,10 +699,18 @@
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.28); ctx.fill();
   }
   function drawDragonShape(s, col, belly, flap) {
-    const fl = (flap || 0), light = shade(col, .3), dark = shade(col, -.35);
-    // wings (membrane + bone), flap raises tips
+    const fl = (flap || 0), light = shade(col, .32), dark = shade(col, -.38), mid = shade(col, -.05);
+    // tail (swaying)
+    const tw = Math.sin(tick * 0.16) * s * 0.35;
+    ctx.fillStyle = dark;
+    ctx.beginPath(); ctx.moveTo(-s * 0.2, s * 0.7); ctx.quadraticCurveTo(tw, s * 1.2, tw * 1.4, s * 1.7); ctx.quadraticCurveTo(tw * 1.1, s * 1.35, s * 0.2, s * 0.7); ctx.closePath(); ctx.fill();
+    // tail fin
+    ctx.beginPath(); ctx.moveTo(tw * 1.4, s * 1.7); ctx.lineTo(tw * 1.4 - s * 0.28, s * 1.9); ctx.lineTo(tw * 1.4 + s * 0.28, s * 1.9); ctx.closePath(); ctx.fill();
+    // wings (membrane + bone + highlight), flap raises tips
     for (const sgn of [-1, 1]) {
-      ctx.fillStyle = dark;
+      const wg = ctx.createLinearGradient(0, -s, sgn * s * 1.5, s * 0.4);
+      wg.addColorStop(0, mid); wg.addColorStop(1, dark);
+      ctx.fillStyle = wg;
       ctx.beginPath();
       ctx.moveTo(sgn * s * 0.2, -s * 0.1);
       ctx.quadraticCurveTo(sgn * s * 1.1, -s * (0.7 + fl), sgn * s * 1.55, -s * (0.45 + fl));
@@ -712,17 +720,22 @@
       ctx.strokeStyle = shade(col, -.5); ctx.lineWidth = Math.max(1, s * 0.06);
       ctx.beginPath(); ctx.moveTo(sgn * s * 0.25, 0); ctx.lineTo(sgn * s * 1.45, -s * (0.4 + fl)); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(sgn * s * 0.25, s * 0.05); ctx.lineTo(sgn * s * 1.15, s * 0.1); ctx.stroke();
+      // leading-edge highlight
+      ctx.strokeStyle = shade(col, .4); ctx.lineWidth = Math.max(1, s * 0.04);
+      ctx.beginPath(); ctx.moveTo(sgn * s * 0.2, -s * 0.1); ctx.quadraticCurveTo(sgn * s * 1.1, -s * (0.72 + fl), sgn * s * 1.55, -s * (0.46 + fl)); ctx.stroke();
     }
     // back spikes
-    ctx.fillStyle = dark;
+    ctx.fillStyle = mid;
     for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(k * s * 0.28, s * 0.1); ctx.lineTo(k * s * 0.28 - s * 0.12, s * 0.55); ctx.lineTo(k * s * 0.28 + s * 0.12, s * 0.55); ctx.closePath(); ctx.fill(); }
-    // body (gradient)
-    const bg = ctx.createLinearGradient(0, -s, 0, s);
-    bg.addColorStop(0, light); bg.addColorStop(1, dark);
+    // body (radial gradient for volume)
+    const bg = ctx.createRadialGradient(-s * 0.2, -s * 0.3, s * 0.1, 0, 0, s * 1.1);
+    bg.addColorStop(0, light); bg.addColorStop(.6, mid); bg.addColorStop(1, dark);
     ctx.fillStyle = bg;
     ctx.beginPath(); ctx.ellipse(0, 0, s * 0.56, s * 0.96, 0, 0, 6.28); ctx.fill();
     // head
     ctx.beginPath(); ctx.arc(0, -s * 0.85, s * 0.5, 0, 6.28); ctx.fill();
+    // snout
+    ctx.fillStyle = mid; ctx.beginPath(); ctx.ellipse(0, -s * 0.6, s * 0.28, s * 0.2, 0, 0, 6.28); ctx.fill();
     // horns
     ctx.fillStyle = shade(col, -.15);
     ctx.beginPath(); ctx.moveTo(-s * 0.35, -s * 1.1); ctx.lineTo(-s * 0.58, -s * 1.65); ctx.lineTo(-s * 0.08, -s * 1.2); ctx.closePath(); ctx.fill();
@@ -747,6 +760,15 @@
     const g2 = ctx.createRadialGradient(W * 0.8, H * 0.75, 0, W * 0.8, H * 0.75, H * 0.7);
     g2.addColorStop(0, 'rgba(40,30,90,0.25)'); g2.addColorStop(1, 'rgba(8,4,14,0)');
     ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
+
+    // distant planet, slowly drifting down (parallax)
+    const plY = ((tick * 0.12) % (H + 340)) - 170, plX = W * 0.24, plR = W * 0.30;
+    const pg = ctx.createRadialGradient(plX - plR * 0.35, plY - plR * 0.35, plR * 0.1, plX, plY, plR);
+    pg.addColorStop(0, 'rgba(120,90,150,0.55)'); pg.addColorStop(.55, 'rgba(70,45,95,0.42)'); pg.addColorStop(1, 'rgba(20,12,30,0.05)');
+    ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(plX, plY, plR, 0, 6.28); ctx.fill();
+    ctx.strokeStyle = 'rgba(200,150,220,0.18)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(plX, plY, plR * 1.35, plR * 0.34, -0.4, 0, 6.28); ctx.stroke();
+    // rim light
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(180,140,255,0.28)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(plX - plR * 0.3, plY - plR * 0.32, plR * 0.98, -0.4, 1.4); ctx.stroke(); ctx.restore();
 
     // twinkling parallax stars
     for (const s of stars) { const tw = 0.55 + 0.45 * Math.sin(tick * 0.05 + s.tw); ctx.globalAlpha = clamp(s.z / 1.4, .2, 1) * tw; ctx.fillStyle = s.z > 1 ? '#ffe6d0' : '#9fb0d8'; ctx.fillRect(s.x, s.y, s.s, s.s * 2.1); }
@@ -780,11 +802,14 @@
       // companion dragons (with wing flap)
       if (state !== STATE.OVER) for (const m of mates) { ctx.save(); ctx.translate(m.x, m.y); const fl = Math.sin(tick * 0.3 + m.side) * 0.18; drawDragonShape(8, m.data.color, '#fff2d8', fl); ctx.restore(); }
 
-      // player fire (breath) — additive glow + core, kept warm gold
+      // player fire (breath) — additive glow + motion trail + core, kept warm gold
       ctx.globalCompositeOperation = 'lighter';
       for (const b of bullets) {
         const core = b.crit ? '#fff3c0' : (b.col ? shade(b.col, .5) : '#ffe6a0');
         const glow = b.crit ? 'rgba(255,200,80,0.6)' : (b.col ? 'rgba(120,200,255,0.5)' : 'rgba(255,150,40,0.55)');
+        // trail: a few fading orbs behind the bullet
+        for (let t = 1; t <= 3; t++) { ctx.globalAlpha = 0.22 * (4 - t); glowOrb(b.x - b.vx * t * 0.55, b.y - b.vy * t * 0.55, b.r * (2.2 - t * 0.4), glow, 'rgba(0,0,0,0)'); }
+        ctx.globalAlpha = 1;
         glowOrb(b.x - b.vx * 0.4, b.y - b.vy * 0.4, b.r * 2.6, glow, 'rgba(0,0,0,0)');
         ctx.fillStyle = core; ctx.beginPath(); ctx.arc(b.x, b.y, b.r * 0.85, 0, 6.28); ctx.fill();
       }
