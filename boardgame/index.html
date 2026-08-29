@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#150a26" />
+<title>ボードゲーム メカニクスDB</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  :root{ --bg:#120820; --card:rgba(255,255,255,.06); --line:rgba(255,255,255,.14); --dim:rgba(255,255,255,.62); }
+  body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Segoe UI",sans-serif;
+       background:radial-gradient(circle at 50% 0%,#2a1a4a,#120820 60%);background-attachment:fixed;color:#fff;
+       padding:24px 16px 80px;line-height:1.65;font-size:14px}
+  .wrap{max-width:960px;margin:0 auto}
+  header h1{font-size:clamp(20px,5.5vw,28px);font-weight:800;letter-spacing:.02em}
+  header p{color:var(--dim);font-size:13px;margin-top:6px}
+  .home{display:inline-block;margin-top:10px;font-size:12px;color:var(--dim);text-decoration:none;border-bottom:1px dotted var(--line)}
+  .tabs{display:flex;gap:8px;margin:20px 0 14px;flex-wrap:wrap}
+  .tab{padding:8px 16px;border-radius:999px;border:1px solid var(--line);background:var(--card);
+       color:var(--dim);font-size:13px;font-weight:700;cursor:pointer}
+  .tab.on{background:#7c5cff;border-color:#7c5cff;color:#fff}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  input[type=search],select{background:rgba(0,0,0,.3);border:1px solid var(--line);color:#fff;
+       border-radius:10px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none}
+  input[type=search]{flex:1;min-width:180px}
+  input[type=search]:focus,select:focus{border-color:#7c5cff}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .chip{padding:5px 11px;border-radius:999px;font-size:11.5px;font-weight:700;cursor:pointer;
+        border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--dim);white-space:nowrap}
+  .chip.on{color:#fff}
+  .count{color:var(--dim);font-size:12px;margin-bottom:10px}
+  .list{display:grid;gap:10px}
+  .item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;cursor:pointer;
+        transition:background .15s,transform .1s}
+  .item:hover{background:rgba(255,255,255,.1)}
+  .item:active{transform:scale(.995)}
+  .item h3{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .en{font-size:11.5px;color:var(--dim);font-weight:500}
+  .catdot{width:9px;height:9px;border-radius:50%;flex:none}
+  .item p.d{color:var(--dim);font-size:12.5px;margin-top:6px}
+  .tagrow{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+  .tag{font-size:10.5px;padding:3px 8px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--dim)}
+  .detail{border-top:1px solid var(--line);margin-top:12px;padding-top:12px;display:none}
+  .item.open .detail{display:block}
+  .detail h4{font-size:11.5px;color:#c9b8ff;font-weight:800;letter-spacing:.08em;margin:12px 0 4px}
+  .detail h4:first-child{margin-top:0}
+  .detail p{font-size:12.5px;color:rgba(255,255,255,.82)}
+  .rel{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}
+  .rel span{font-size:11px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.05)}
+  .caution{border-left:3px solid #ff7b54;padding-left:10px}
+  .meter{display:inline-flex;gap:2px;vertical-align:middle;margin-left:4px}
+  .meter i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.2)}
+  .meter i.f{background:#ffb703}
+  .gen{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .gen button{background:#7c5cff;border:0;color:#fff;font-weight:800;font-size:14px;font-family:inherit;
+        padding:12px 22px;border-radius:12px;cursor:pointer}
+  .gen button:active{transform:scale(.97)}
+  .slot{margin-top:14px;padding:12px 14px;border-radius:12px;background:rgba(0,0,0,.25);border:1px solid var(--line)}
+  .slot .lbl{font-size:10.5px;letter-spacing:.1em;color:#c9b8ff;font-weight:800}
+  .slot .val{font-size:15px;font-weight:700;margin-top:3px}
+  .slot .sub{font-size:12px;color:var(--dim);margin-top:4px}
+  .note{font-size:12px;color:var(--dim);margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🎲 ボードゲーム メカニクスDB</h1>
+    <p>メカニクス <b id="mCount">0</b> 件 / 代表作 <b id="gCount">0</b> 件 — 自作ゲームの設計用リファレンス</p>
+    <a class="home" href="../">← アプリ一覧に戻る</a>
+  </header>
+
+  <div class="tabs">
+    <button class="tab on" data-tab="mech">メカニクス</button>
+    <button class="tab" data-tab="game">ゲームから引く</button>
+    <button class="tab" data-tab="gen">組み合わせ発想</button>
+  </div>
+
+  <!-- ============ メカニクス ============ -->
+  <section id="tab-mech">
+    <div class="bar">
+      <input type="search" id="q" placeholder="メカニクス名・説明で検索（例: 競り, ワーカー, 協力）" />
+      <select id="sortM">
+        <option value="cat">カテゴリ順</option>
+        <option value="weightAsc">軽い順</option>
+        <option value="weightDesc">重い順</option>
+        <option value="downtime">待ち時間が短い順</option>
+      </select>
+    </div>
+    <div class="chips" id="catChips"></div>
+    <div class="count" id="mResult"></div>
+    <div class="list" id="mList"></div>
+  </section>
+
+  <!-- ============ ゲーム ============ -->
+  <section id="tab-game" class="hidden">
+    <div class="bar">
+      <input type="search" id="qg" placeholder="ゲーム名・デザイナー・学びで検索" />
+      <select id="fw">
+        <option value="">重さ：すべて</option>
+        <option value="1">〜2.0（パーティ・入門）</option>
+        <option value="2">2.0〜3.0（ファミリー・中量級）</option>
+        <option value="3">3.0〜4.0（ゲーマーズ）</option>
+        <option value="4">4.0〜（ヘビー級）</option>
+      </select>
+      <select id="fp">
+        <option value="">人数：すべて</option>
+        <option value="1">1人可</option>
+        <option value="2">2人可</option>
+        <option value="3">3人可</option>
+        <option value="4">4人可</option>
+        <option value="5">5人以上可</option>
+      </select>
+    </div>
+    <div class="count" id="gResult"></div>
+    <div class="list" id="gList"></div>
+  </section>
+
+  <!-- ============ 発想支援 ============ -->
+  <section id="tab-gen" class="hidden">
+    <div class="gen">
+      <p style="font-size:13px;color:var(--dim);margin-bottom:14px">
+        「骨格 1つ ＋ 味付け 2つ ＋ 制約 1つ」をランダムに引きます。ブレストの起点用。
+      </p>
+      <button id="roll">🎲 引き直す</button>
+      <div id="genOut"></div>
+      <p class="note">骨格＝手番とアクションの土台。味付け＝手触りを決める層。制約＝面白さを生む「〜してはいけない」。
+      いい組み合わせが出たら、そのままルール案の相談に使ってください。</p>
+    </div>
+  </section>
+</div>
+
+<script src="mechanics.js"></script>
+<script src="games.js"></script>
+<script>
+const CAT = Object.fromEntries(CATEGORIES.map(c=>[c.id,c]));
+const MECH = Object.fromEntries(MECHANICS.map(m=>[m.id,m]));
+const $ = s=>document.querySelector(s);
+document.getElementById('mCount').textContent = MECHANICS.length;
+document.getElementById('gCount').textContent = GAMES.length;
+
+/* ---- タブ ---- */
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===b));
+  ['mech','game','gen'].forEach(t=>$('#tab-'+t).classList.toggle('hidden', t!==b.dataset.tab));
+});
+
+/* ---- メーター ---- */
+const meter=(n,max=5)=>'<span class="meter">'+Array.from({length:max},(_,i)=>`<i class="${i<n?'f':''}"></i>`).join('')+'</span>';
+
+/* ---- カテゴリチップ ---- */
+let activeCats = new Set();
+const chipBox = $('#catChips');
+CATEGORIES.forEach(c=>{
+  const n = MECHANICS.filter(m=>m.cat===c.id).length;
+  const el = document.createElement('div');
+  el.className='chip'; el.textContent = `${c.ja} ${n}`;
+  el.style.borderColor = c.color+'66';
+  el.onclick = ()=>{
+    activeCats.has(c.id) ? activeCats.delete(c.id) : activeCats.add(c.id);
+    el.classList.toggle('on', activeCats.has(c.id));
+    el.style.background = activeCats.has(c.id) ? c.color+'33' : 'rgba(255,255,255,.04)';
+    el.style.color = activeCats.has(c.id) ? '#fff' : '';
+    renderM();
+  };
+  chipBox.appendChild(el);
+});
+
+/* ---- メカニクス描画 ---- */
+function gamesUsing(id){ return GAMES.filter(g=>g.mech.includes(id)); }
+
+function renderM(){
+  const q = $('#q').value.trim().toLowerCase();
+  const sort = $('#sortM').value;
+  let list = MECHANICS.filter(m=>{
+    if(activeCats.size && !activeCats.has(m.cat)) return false;
+    if(!q) return true;
+    return (m.ja+m.en+m.desc+m.effect+m.caution+m.games.join('')).toLowerCase().includes(q);
+  });
+  const order = Object.fromEntries(CATEGORIES.map((c,i)=>[c.id,i]));
+  if(sort==='cat') list.sort((a,b)=>order[a.cat]-order[b.cat]);
+  if(sort==='weightAsc') list.sort((a,b)=>a.weight-b.weight);
+  if(sort==='weightDesc') list.sort((a,b)=>b.weight-a.weight);
+  if(sort==='downtime') list.sort((a,b)=>a.downtime-b.downtime);
+
+  $('#mResult').textContent = `${list.length} 件`;
+  $('#mList').innerHTML = list.map(m=>{
+    const c = CAT[m.cat];
+    const rel = (m.goodWith||[]).map(id=>`<span>${MECH[id]?MECH[id].ja:id}</span>`).join('');
+    const gu = gamesUsing(m.id).slice(0,8).map(g=>`<span>${g.ja}</span>`).join('');
+    return `<div class="item" onclick="this.classList.toggle('open')">
+      <h3><i class="catdot" style="background:${c.color}"></i>${m.ja}<span class="en">${m.en}</span></h3>
+      <p class="d">${m.desc}</p>
+      <div class="tagrow">
+        <span class="tag" style="color:${c.color}">${c.ja}</span>
+        <span class="tag">重さ ${meter(m.weight)}</span>
+        <span class="tag">待ち時間 ${meter(m.downtime,3)}</span>
+        <span class="tag">${m.players} 人</span>
+      </div>
+      <div class="detail">
+        <h4>設計上の効果</h4><p>${m.effect}</p>
+        <h4>注意点</h4><p class="caution">${m.caution}</p>
+        <h4>相性のよいメカニクス</h4><div class="rel">${rel}</div>
+        <h4>DB内の採用作 (${gamesUsing(m.id).length})</h4><div class="rel">${gu||'<span>—</span>'}</div>
+        <h4>その他の代表作</h4><p>${m.games.join(' / ')}</p>
+      </div>
+    </div>`;
+  }).join('');
+}
+$('#q').oninput = renderM; $('#sortM').onchange = renderM;
+
+/* ---- ゲーム描画 ---- */
+function playerOK(str, f){
+  const nums = str.match(/\d+/g).map(Number);
+  const lo=nums[0], hi=nums[1]||nums[0];
+  return f==='5' ? hi>=5 : (Number(f)>=lo && Number(f)<=hi);
+}
+function renderG(){
+  const q = $('#qg').value.trim().toLowerCase();
+  const w = $('#fw').value, p = $('#fp').value;
+  let list = GAMES.filter(g=>{
+    if(w){ const lo=Number(w), hi=lo+1;
+      if(lo===1 && !(g.weight<2)) return false;
+      if(lo===2 && !(g.weight>=2 && g.weight<3)) return false;
+      if(lo===3 && !(g.weight>=3 && g.weight<4)) return false;
+      if(lo===4 && !(g.weight>=4)) return false; }
+    if(p && !playerOK(g.players,p)) return false;
+    if(!q) return true;
+    return (g.ja+g.en+g.designer+g.lesson+g.mech.map(i=>MECH[i].ja).join('')).toLowerCase().includes(q);
+  }).sort((a,b)=>a.weight-b.weight);
+
+  $('#gResult').textContent = `${list.length} 件`;
+  $('#gList').innerHTML = list.map(g=>`
+    <div class="item" onclick="this.classList.toggle('open')">
+      <h3>${g.ja}<span class="en">${g.en}${g.year>0?' / '+g.year:''}</span></h3>
+      <div class="tagrow">
+        <span class="tag">${g.players} 人</span><span class="tag">${g.time} 分</span>
+        <span class="tag">重さ ${g.weight.toFixed(1)}</span><span class="tag">${g.designer}</span>
+      </div>
+      <div class="tagrow">${g.mech.map(i=>`<span class="tag" style="color:${CAT[MECH[i].cat].color}">${MECH[i].ja}</span>`).join('')}</div>
+      <div class="detail"><h4>盗める設計</h4><p>${g.lesson}</p></div>
+    </div>`).join('');
+}
+['#qg'].forEach(s=>$(s).oninput=renderG);
+['#fw','#fp'].forEach(s=>$(s).onchange=renderG);
+
+/* ---- 発想支援 ---- */
+const SKELETON = ['turn','action','worker','deck','move'];
+const FLAVOR   = ['card','dice','resource','area','tile','auction','score'];
+const CONSTRAINT = ['social','info','coop','realtime','campaign'];
+const pick = a => a[Math.floor(Math.random()*a.length)];
+const byCats = cs => MECHANICS.filter(m=>cs.includes(m.cat));
+function roll(){
+  const sk = pick(byCats(SKELETON));
+  const pool = byCats(FLAVOR).filter(m=>m.id!==sk.id);
+  const f1 = pick(pool), f2 = pick(pool.filter(m=>m.id!==f1.id && m.cat!==f1.cat));
+  const co = pick(byCats(CONSTRAINT));
+  const slot = (lbl,m)=>`<div class="slot"><div class="lbl">${lbl}</div>
+      <div class="val" style="color:${CAT[m.cat].color}">${m.ja}</div>
+      <div class="sub">${m.desc}</div>
+      <div class="sub" style="opacity:.75">▸ ${m.effect}</div></div>`;
+  const est = ((sk.weight+f1.weight+f2.weight+co.weight)/4).toFixed(1);
+  $('#genOut').innerHTML =
+    slot('骨格 / SKELETON', sk) + slot('味付け 1 / FLAVOR', f1) +
+    slot('味付け 2 / FLAVOR', f2) + slot('制約 / CONSTRAINT', co) +
+    `<div class="slot"><div class="lbl">推定の重さ</div><div class="val">${est} / 5.0</div>
+     <div class="sub">4要素の平均。3.0 を超えるなら、どれか1つを削るのが現実的です。</div></div>`;
+}
+$('#roll').onclick = roll;
+
+renderM(); renderG(); roll();
+</script>
+</body>
+</html>
