@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#140c24" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<title>パック・バトラーズ</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎴</text></svg>" />
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+<div id="app">
+
+  <!-- ホーム -->
+  <section id="home" class="screen">
+    <div class="home-top">
+      <div class="coins" id="homeCoins"></div>
+      <div class="stats" id="homeStats"></div>
+    </div>
+    <div class="logo">
+      <div class="logo-cards"><span>🐉</span><span>🦸</span><span>😈</span></div>
+      <h1>パック・バトラーズ</h1>
+      <p>パックを引いて、カードを集めて、デッキで戦え！</p>
+    </div>
+    <div class="menu">
+      <button class="mbtn primary" data-go="pack">🎴 パックを引く<small id="freeHint">1パック 100コイン</small></button>
+      <button class="mbtn" data-go="collection">📚 コレクション・デッキ<small id="deckHint"></small></button>
+      <div class="mgroup">
+        <div class="mlabel">🤖 ソロ対戦</div>
+        <div class="row3">
+          <button class="mbtn small" data-solo="0">初級<small>+30</small></button>
+          <button class="mbtn small" data-solo="1">中級<small>+60</small></button>
+          <button class="mbtn small" data-solo="2">上級<small>+100</small></button>
+        </div>
+      </div>
+      <button class="mbtn" data-go="online" id="onlineBtn">🌐 オンライン対戦<small id="onlineHint">ほかのプレイヤーと対戦</small></button>
+      <button class="mbtn ghost" id="howBtn">❓ 遊び方</button>
+    </div>
+    <a class="back-link" href="https://kazukicrypto.github.io/weekend-dot-visualizer/">← ゲーム一覧</a>
+  </section>
+
+  <!-- パック -->
+  <section id="pack" class="screen hidden">
+    <header class="bar"><button class="back" data-go="home">←</button><h2>パック</h2><div class="coins" id="packCoins"></div></header>
+    <div class="pack-area" id="packArea">
+      <div class="pack-visual" id="packVisual"><div class="pack-shine"></div><div class="pack-emoji">🎴</div><div class="pack-title">BATTLE PACK</div><div class="pack-sub">5枚入り・1枚はR以上確定</div></div>
+      <div class="rates">排出率 N 65% / R 25% / SR 8% / UR 2%</div>
+      <div class="pack-btns">
+        <button class="mbtn primary" id="freePackBtn">🎁 デイリー無料パック</button>
+        <button class="mbtn primary" id="buyPackBtn">🎴 パックを開ける（100）</button>
+        <button class="mbtn" id="buy5Btn">🎴×5 まとめて開ける（500）</button>
+      </div>
+    </div>
+    <div class="reveal hidden" id="reveal">
+      <div class="reveal-grid" id="revealGrid"></div>
+      <div class="reveal-note" id="revealNote"></div>
+      <div class="pack-btns row">
+        <button class="mbtn" id="flipAllBtn">すべてめくる</button>
+        <button class="mbtn primary hidden" id="againBtn">もう1パック</button>
+        <button class="mbtn hidden" id="revealDoneBtn">OK</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- コレクション -->
+  <section id="collection" class="screen hidden">
+    <header class="bar"><button class="back" data-go="home">←</button><h2>デッキ編集</h2><div class="coins" id="colCoins"></div></header>
+    <div class="deck-head">
+      <div><b id="deckCount">0/20</b> <span id="deckWarn"></span></div>
+      <div class="deck-head-btns"><button class="chip-btn" id="autoDeckBtn">⚡ おまかせ</button><button class="chip-btn" id="clearDeckBtn">クリア</button></div>
+    </div>
+    <div class="curve" id="curve"></div>
+    <div class="deck-list" id="deckList"></div>
+    <div class="col-filter" id="colFilter">
+      <button data-f="all" class="on">すべて</button><button data-f="owned">所持</button><button data-f="unit">ユニット</button><button data-f="spell">スペル</button>
+    </div>
+    <div class="col-progress" id="colProgress"></div>
+    <div class="col-grid" id="colGrid"></div>
+  </section>
+
+  <!-- オンライン -->
+  <section id="online" class="screen hidden">
+    <header class="bar"><button class="back" id="onlineBack">←</button><h2>オンライン対戦</h2><div></div></header>
+    <div class="online-body" id="onlineMenu">
+      <label class="field">プレイヤー名<input id="nameInput" maxlength="12" placeholder="なまえ" /></label>
+      <button class="mbtn primary" id="randomBtn">⚔️ ランダムマッチ</button>
+      <button class="mbtn" id="createRoomBtn">🏠 ルームを作って友達と対戦</button>
+      <div class="join-row"><input id="roomInput" maxlength="8" placeholder="ルームコード" autocapitalize="characters" /><button class="mbtn" id="joinRoomBtn">参加</button></div>
+      <p class="note">勝利 +100 / 敗北 +30 コイン。1ターン75秒。</p>
+    </div>
+    <div class="online-body hidden" id="onlineWait">
+      <div class="spinner"></div>
+      <div id="waitText">対戦相手を待っています…</div>
+      <div class="room-code hidden" id="roomCodeBox">ルームコード<b id="roomCode"></b><button class="chip-btn" id="copyLinkBtn">🔗 招待リンクをコピー</button></div>
+      <button class="mbtn ghost" id="cancelWaitBtn">キャンセル</button>
+    </div>
+  </section>
+
+  <!-- バトル -->
+  <section id="battle" class="screen hidden">
+    <div class="hero-bar opp" id="oppBar"></div>
+    <div class="board opp" id="oppBoard"></div>
+    <div class="midline">
+      <div class="turn-ind" id="turnInd"></div>
+      <div class="log" id="logLine"></div>
+    </div>
+    <div class="board me" id="myBoard"></div>
+    <div class="hero-bar me" id="myBar"></div>
+    <div class="detail" id="detail"></div>
+    <div class="hand" id="hand"></div>
+    <div class="battle-tools">
+      <button class="tool" id="emoteBtn">💬</button>
+      <button class="tool" id="logBtn">📜</button>
+      <button class="tool" id="concedeBtn">🏳️</button>
+    </div>
+    <div class="emote-row hidden" id="emoteRow"></div>
+    <div class="emote-bubble hidden" id="oppEmote"></div>
+    <div class="emote-bubble me hidden" id="myEmote"></div>
+    <div class="banner hidden" id="banner"></div>
+  </section>
+
+  <div class="modal hidden" id="modal"><div class="modal-box" id="modalBox"></div></div>
+  <div class="toast hidden" id="toast"></div>
+  <div id="fx"></div>
+</div>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
